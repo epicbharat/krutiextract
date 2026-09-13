@@ -1,3 +1,10 @@
 pymupdf
 pymupdf4llm
 nltk
+
+# optional, only for --enhance-ocr
+opencv-python-headless
+numpy
+
+# tests
+pytest
