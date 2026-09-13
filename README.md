@@ -59,7 +59,7 @@ pip install -r requirements.txt
 ### Note on NLTK (Required)
 After installing, ensure you download the required NLTK English word corpus:
 ```bash
-python -c "import nltk; nltk.download('words')"
+python -c "import nltk; nltk.download('brown')"
 ```
 
 ### Note on Tesseract (Required for OCR)
@@ -69,30 +69,30 @@ If you are parsing scanned PDFs or PDFs with embedded images, you must have [Tes
 
 ## 💻 CLI Usage Guide
 
-KrutiExtract provides a powerful Command Line Interface (CLI).
+KrutiExtract provides a powerful Command Line Interface (CLI). Once installed via PyPI, you can run the `krutiextract` command globally.
 
 ### 1. Process a Single File
 ```bash
-python -m src.cli --input "path/to/document.pdf" --output "path/to/output.md"
+krutiextract --input "path/to/document.pdf" --output "path/to/output.md"
 ```
 
 ### 2. Batch Process a Directory
 Recursively process an entire folder of PDFs:
 ```bash
-python -m src.cli --dir "path/to/pdf/folder" --out-dir "path/to/markdown/folder"
+krutiextract --dir "path/to/pdf/folder" --out-dir "path/to/markdown/folder"
 ```
 
 ### 3. Force a Specific Font Encoding
 By default, the font is set to `auto`. You can force a specific bypass or mapping:
 ```bash
 # Available options: krutidev, chanakya, auto, unicode, english
-python -m src.cli --input "doc.pdf" --font chanakya
+krutiextract --input "doc.pdf" --font chanakya
 ```
 
 ### 4. Enable OpenCV OCR Enhancement
 Use this flag for old, blurry, or low-resolution scanned PDFs to artificially sharpen the text before extraction:
 ```bash
-python -m src.cli --input "blurry_scan.pdf" --enhance-ocr
+krutiextract --input "blurry_scan.pdf" --enhance-ocr
 ```
 
 ## 🤝 Contributing
