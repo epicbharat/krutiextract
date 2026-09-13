@@ -1,8 +1,6 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/epicbharat/krutiextract/main/assets/banner.png" alt="KrutiExtract Banner" width="100%"/>
-  <p><strong>A Universal Legacy Hindi PDF to Markdown Extractor</strong></p>
-
-  [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+  <p><strong>A Universal Legacy Hindi PDF to Markdown Extractor</strong></p> [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/epicbharat)
 </div>
