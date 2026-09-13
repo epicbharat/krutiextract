@@ -147,6 +147,33 @@ def auto_detect_font(text: str) -> str:
         return 'chanakya'
     return 'krutidev'
 
+# Cache the English words so we only load it once
+_ENGLISH_WORDS = None
+
+def _get_english_words():
+    global _ENGLISH_WORDS
+    if _ENGLISH_WORDS is None:
+        try:
+            # We use the Brown corpus which is much smaller (~40k words) and prevents 
+            # obscure valid KrutiDev strings like "tula" (जनसं) from being bypassed.
+            nltk.download('brown', quiet=True)
+            from nltk.corpus import brown
+            _ENGLISH_WORDS = set(w.lower() for w in brown.words() if w.isalpha())
+        except Exception:
+            # Fallback to an empty set if NLTK fails
+            _ENGLISH_WORDS = set()
+    return _ENGLISH_WORDS
+
+def is_english_word(word: str) -> bool:
+    """Returns True if the word is found in our English dictionary."""
+    if not word.strip():
+        return False
+    # If the word contains numbers or punctuation, don't treat it as a pure English dictionary word
+    if not word.isalpha():
+        return False
+        
+    return word.lower() in _get_english_words()
+
 def convert_legacy_text(text: str, font: str = 'auto') -> str:
     if font == 'auto':
         font = auto_detect_font(text)
