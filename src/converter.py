@@ -140,8 +140,9 @@ def auto_detect_font(text: str) -> str:
     Detects if the legacy font used is KrutiDev or Chanakya based on character frequencies.
     Returns 'krutidev', 'chanakya', or 'unicode' for modern English/Hinglish/Hindi text.
     """
-    # KrutiDev features: 'vkSj' (और), 'gS' (है), 'ds' (के), 'dh' (की)
-    krutidev_score = text.count('vkSj') + text.count('gS') + text.count('ds') + text.count('dh') + text.count('osQ')
+    # KrutiDev features: 'vkSj' (और), 'gS' (है), 'gksrh' (होती), 'Hkkjr' (भारत)
+    # Note: DO NOT use 'ds' or 'dh' as they trigger massive false-positives on English text (e.g. 'words', 'adhere')
+    krutidev_score = text.count('vkSj') + text.count('gS') + text.count('osQ') + text.count('gksrh') + text.count('Hkkjr')
     
     # Chanakya features: '¥õÚ' / '¥æõÚ' (और), 'ãñ' (है), '·¤' (क), 'ß' (व), 'Ü' (ल)
     chanakya_score = text.count('¥') + text.count('ãñ') + text.count('·') + text.count('ß') + text.count('Ü')
