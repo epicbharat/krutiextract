@@ -60,6 +60,7 @@ def krutidev_to_unicode(text: str) -> str:
     
     modified_substring = text
     modified_substring = modified_substring.replace("osQ", "के")
+    modified_substring = modified_substring.replace("oSQ", "कै")
 
     # Step 1: Replace characters mapped directly in the arrays
     for i in range(len(array_one)):
@@ -127,6 +128,10 @@ def krutidev_to_unicode(text: str) -> str:
     modified_substring = modified_substring.replace("ंे", "ें")
     modified_substring = modified_substring.replace("ंो", "ों")
     modified_substring = modified_substring.replace("ाे", "ो")
+
+    # Fix common KrutiDev typist visual hacks that become typos in Unicode
+    modified_substring = modified_substring.replace("ध्कि", "धिक")
+    modified_substring = modified_substring.replace("पफ", "फ")
 
     return modified_substring
 
