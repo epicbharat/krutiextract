@@ -6,12 +6,23 @@ import re
 import tempfile
 from typing import List, Optional, Sequence, Tuple
 
-from .converter import PASSTHROUGH, auto_detect_font, convert_legacy_text
-from .extractor import ExtractionError, extract_raw_markdown
+from .converter import (
+    PASSTHROUGH,
+    auto_detect_font,
+    convert_legacy_text,
+    normalise_legacy_encoding,
+)
+from .extractor import extract_raw_markdown
 from .markdown_utils import protect_non_hindi_syntax, restore_non_hindi_syntax
-from .pdf_spans import font_report, latin_spans
+from .pdf_spans import SUPPORTED_FONT_RE, font_report, latin_spans
 
-__all__ = ["convert_pdf", "clean_lines", "normalize_extracted_markdown"]
+__all__ = [
+    "convert_pdf",
+    "clean_lines",
+    "normalize_extracted_markdown",
+    "strip_extractor_scaffolding",
+    "repair_legacy_fragments",
+]
 
 # Boilerplate that appears on every page of a reprinted textbook.
 _DEFAULT_DROP = (r"^\s*Reprint\s+\d{4}(?:\s*[-–.]\s*\d{2,4})?\s*$",)
@@ -45,16 +56,32 @@ _BOLD_SIGN = re.compile(
     rf"(?<=[A-Za-z])[ \t]?\*\*([{re.escape(_LEGACY_SIGNS)}])\*\*[ \t]?(?=[A-Za-z\u00a1])")
 
 
-def normalize_extracted_markdown(text: str) -> str:
-    """Repair artefacts of the Markdown extractor before conversion."""
+def strip_extractor_scaffolding(text: str) -> str:
+    """Remove markup that is never document content. Safe for any language."""
+    return _HTML_COMMENT.sub("", text)
+
+
+def repair_legacy_fragments(text: str) -> str:
+    """Rejoin words the extractor split with inline markup.
+
+    Only safe on legacy-encoded text. These rules delete emphasis markers and
+    the space beside them, which is right when the extractor has split
+    "C;wVhI+kqQy" across a <sup>, and wrong in a document that simply
+    contains the bolded English word "a".
+    """
     text = text.replace(_TAG_SENTINEL, "")
     text = _SPLIT_SUP.sub(lambda m: m.group(1) + m.group(5) + m.group(8), text)
     text = _INLINE_TAG.sub(_TAG_SENTINEL, text)
     text = _TAG_DEBRIS.sub("", text)
     text = text.replace(_TAG_SENTINEL, "")
-    text = _BOLD_SIGN.sub(r"\1", text)
-    text = _HTML_COMMENT.sub("", text)
-    return text
+    return _BOLD_SIGN.sub(r"\1", text)
+
+
+def normalize_extracted_markdown(text: str, legacy: bool = True) -> str:
+    """Scaffolding removal, plus legacy fragment repair when *legacy*."""
+    if legacy:
+        text = repair_legacy_fragments(text)
+    return strip_extractor_scaffolding(text)
 
 
 def clean_lines(text: str, drop_patterns: Sequence[str] = ()) -> str:
@@ -73,12 +100,40 @@ def clean_lines(text: str, drop_patterns: Sequence[str] = ()) -> str:
     return "\n".join(out)
 
 
+def _page_count(pdf_path: str) -> int:
+    try:
+        import pymupdf
+        with pymupdf.open(pdf_path) as doc:
+            return doc.page_count
+    except Exception:
+        return 0
+
+
+def _warn_if_empty(text: str, warnings: List[str], pdf_path: str = "",
+                   pages: Optional[Sequence[int]] = None) -> None:
+    """Flag a result that is empty, or so thin the PDF is likely a scan."""
+    if not text.strip():
+        warnings.append(
+            "no text recovered: the PDF is probably image-only. Check that "
+            "Tesseract and its language pack are installed, or raise --ocr-dpi."
+        )
+        return
+
+    count = len(pages) if pages else _page_count(pdf_path)
+    if count >= 3 and len(text) / count < 400:
+        warnings.append(
+            f"only {len(text)} characters recovered from {count} pages. The "
+            "PDF is probably scanned and OCR found little; check the Tesseract "
+            "language pack and try a higher --ocr-dpi."
+        )
+
+
 def convert_pdf(
     pdf_path: str,
     font: str = "auto",
     enhance_ocr: bool = False,
     ocr: bool = True,
-    ocr_language: str = "hin",
+    ocr_language: str = "hin+eng",
     ocr_dpi: int = 400,
     enhance_options: Optional[dict] = None,
     drop_patterns: Sequence[str] = (),
@@ -109,7 +164,12 @@ def convert_pdf(
         if temp_pdf and os.path.exists(temp_pdf):
             os.remove(temp_pdf)
 
-    raw = normalize_extracted_markdown(raw)
+    # Scaffolding removal is safe for any document. The legacy repairs are
+    # not, so they wait until the profile is known.
+    raw = strip_extractor_scaffolding(raw)
+    # Re-read a MacRoman-reported legacy stream before anything else looks at
+    # it, so detection, protection and conversion all see the same bytes.
+    raw = normalise_legacy_encoding(raw)
 
     # The body font settles the profile far more reliably than character
     # statistics: a PDF whose text is drawn in a normal Latin font has nothing
@@ -119,16 +179,27 @@ def convert_pdf(
             report = font_report(pdf_path)
         except Exception:
             report = {}
-        if report and not report.get("legacy", True):
-            font = auto_detect_font(raw)
-            if font not in PASSTHROUGH:
-                font = "english"
+        dominant = (report or {}).get("dominant", "")
+        if report.get("legacy") and dominant and not SUPPORTED_FONT_RE.search(dominant):
+            warnings.append(
+                f"the body font '{dominant}' is a legacy Devanagari encoding "
+                "this build has no mapping for; the converted text will be "
+                "wrong. Supported: KrutiDev, DevLys, Walkman-Chanakya, "
+                "Chanakya. See docs/GUIDE.md section 9."
+            )
 
+    # The font name warns, it does not decide. A legacy font under a custom
+    # name ("rajpurohit") is common, and forcing such a document to English
+    # left all of it unconverted.
     profile = auto_detect_font(raw) if font == "auto" else font
 
     if profile in PASSTHROUGH:
         # Nothing to convert, so nothing is protected either.
-        return clean_lines(raw, drop_patterns), profile, warnings
+        out = clean_lines(raw, drop_patterns)
+        _warn_if_empty(out, warnings, pdf_path, pages)
+        return out, profile, warnings
+
+    raw = repair_legacy_fragments(raw)
 
     # Ask the source PDF which words it drew in a Latin font before guessing.
     try:
@@ -141,4 +212,6 @@ def convert_pdf(
         profile = auto_detect_font(protected)
     converted = convert_legacy_text(protected, profile)
     restored = restore_non_hindi_syntax(converted, preserved)
-    return clean_lines(restored, drop_patterns), profile, warnings
+    out = clean_lines(restored, drop_patterns)
+    _warn_if_empty(out, warnings, pdf_path, pages)
+    return out, profile, warnings

@@ -1,194 +1,462 @@
+# -*- coding: utf-8 -*-
+"""Legacy Hindi encoding -> Devanagari Unicode.
+
+Three legacy encodings are supported, and they are genuinely different fonts
+with conflicting rules, not dialects of one map:
+
+  krutidev  KrutiDev 010 / DevLys 010.  `=k` is त्रा, `osQ` is वेफ.
+  walkman   Walkman-Chanakya 905.  `=k` is त्र, `osQ` is के, `¼` is द्ध.
+            This is the font NCERT uses for its Hindi textbooks.
+  chanakya  Chanakya (see chanakya_map.py).
+
+Applying walkman rules to a krutidev document corrupts it and vice versa, so
+the profile is detected per document rather than hard-coded.
+
+Both Latin-mapped profiles run the same three stages:
+  1. profile pre-rules   (visual keyboard hacks that combine two keys)
+  2. ordered map replace (array_one[i] -> array_two[i])
+  3. structural passes   (short-i matra, reph reordering, cleanup)
+"""
+
 import re
+import unicodedata
+from typing import Dict, List, Sequence, Tuple
+
+from .aps_converter import aps_to_unicode
 from .chanakya_converter import chanakya_to_unicode
+from .krutidev_map import array_one, array_two
+from .markdown_utils import is_marker
 
-# KrutiDev to Unicode mapping arrays
-array_one = [
-    "ñ", "Q+Z", "sas", "aa", ")Z", "ZZ",
-    "å", "ƒ", "„", "…", "†", "‡", "ˆ", "‰", "Š", "‹",
-    "¶+", "d+", "[+k", "[+", "x+", "T+", "t+", "M+", "<+", "Q+", ";+", "j+", "u+",
-    "Ùk", "Ù", "ä", "–", "—", "é", "™", "=kk", "f=k",
-    "à", "á", "â", "ã", "ºz", "º", "í", "{k", "{", "=", "«",
-    "Nî", "Vî", "Bî", "Mî", "<î", "|", "K", "}",
-    "J", "Vª", "Mª", "<ªª", "Nª", "Ø", "Ý", "nzZ", "æ", "ç", "Á", "xz", "#", ":",
-    "v‚", "vks", "vkS", "vk", "v", "b±", "Ã", "bZ", "b", "m", "Å", ",s", ",", "_",
-    "ô", "d", "Dk", "D", "[k", "[", "x", "Xk", "X", "Ä", "?k", "?", "³",
-    "pkS", "p", "Pk", "P", "N", "t", "Tk", "T", ">", "÷", "¥",
-    "ê", "ë", "V", "B", "ì", "ï", "M+", "<+", "M", "<", ".k", ".",
-    "r", "Rk", "R", "Fk", "F", ")", "n", "/k", "èk", "/", "Ë", "è", "u", "Uk", "U",
-    "i", "Ik", "I", "Q", "¶", "c", "Ck", "C", "Hk", "H", "e", "Ek", "E",
-    ";", "¸", "j", "y", "Yk", "Y", "G", "o", "Ok", "O",
-    "'k", "'", "\"k", "\"", "l", "Lk", "L", "g",
-    "È", "z",
-    "Ì", "Í", "Î", "Ï", "Ñ", "Ò", "Ó", "Ô", "Ö", "Ø", "Ù", "Ük", "Ü",
-    "‚", "ks", "kS", "k", "h", "q", "w", "`", "s", "S",
-    "a", "¡", "%", "W", "•", "·", "∙", "·", "~j", "~", "\\", "+", " ः",
-    "^", "*", "Þ", "ß", "(", "¼", "½", "¿", "À", "¾", "A", "-", "&", "&", "Œ", "]", "~ ", "@", "µ"
+__all__ = [
+    "convert_legacy_text",
+    "normalise_legacy_encoding",
+    "krutidev_to_unicode",
+    "walkman_to_unicode",
+    "aps_to_unicode",
+    "auto_detect_font",
+    "PROFILES",
 ]
 
-array_two = [
-    "॰", "QZ+", "sa", "a", "र्द्ध", "Z",
-    "०", "१", "२", "३", "४", "५", "६", "७", "८", "९",
-    "फ़्", "क़", "ख़", "ख़्", "ग़", "ज़्", "ज़", "ड़", "ढ़", "फ़", "य़", "ऱ", "ऩ",
-    "त्त", "त्त्", "क्त", "दृ", "कृ", "न्न", "न्न्", "=k", "f=",
-    "ह्न", "ह्य", "हृ", "ह्म", "ह्र", "ह्", "द्द", "क्ष", "क्ष्", "त्र", "त्र्",
-    "छ्य", "ट्य", "ठ्य", "ड्य", "ढ्य", "द्य", "ज्ञ", "द्व",
-    "श्र", "ट्र", "ड्र", "ढ्र", "छ्र", "क्र", "फ्र", "र्द्र", "द्र", "प्र", "प्र", "ग्र", "रु", "रू",
-    "ऑ", "ओ", "औ", "आ", "अ", "ईं", "ई", "ई", "इ", "उ", "ऊ", "ऐ", "ए", "ऋ",
-    "क्क", "क", "क", "क्", "ख", "ख्", "ग", "ग", "ग्", "घ", "घ", "घ्", "ङ",
-    "चै", "च", "च", "च्", "छ", "ज", "ज", "ज्", "झ", "झ्", "ञ",
-    "ट्ट", "ट्ठ", "ट", "ठ", "ड्ड", "ड्ढ", "ड़", "ढ़", "ड", "ढ", "ण", "ण्",
-    "त", "त", "त्", "थ", "थ्", "द्ध", "द", "ध", "ध", "ध्", "ध्", "ध्", "न", "न", "न्",
-    "प", "प", "प्", "फ", "फ्", "ब", "ब", "ब्", "भ", "भ्", "म", "म", "म्",
-    "य", "य्", "र", "ल", "ल", "ल्", "ळ", "व", "व", "व्",
-    "श", "श्", "ष", "ष्", "स", "स", "स्", "ह",
-    "ीं", "्र",
-    "द्द", "ट्ट", "ट्ठ", "स्त्र", "कृ", "भ", "्य", "ड्ढ", "झ्", "क्र", "त्त्", "श", "श्",
-    "ॉ", "ो", "ौ", "ा", "ी", "ु", "ू", "ृ", "े", "ै",
-    "ं", "ँ", "ः", "ॅ", "ऽ", "ऽ", "ऽ", "ऽ", "्र", "्", "?", "़", ":",
-    "'", "'", "\"", "\"", ";", "(", ")", "{", "}", "=", "।", ".", "-", "µ", "॰", ",", "् ", "/", "—"
-]
+PROFILES = ("krutidev", "devlys", "walkman", "ncert", "chanakya", "aps",
+            "priyanka", "unicode", "english", "hinglish")
 
-def escape_regex(s):
-    return re.escape(s)
+_ALIASES = {"devlys": "krutidev", "ncert": "walkman", "priyanka": "aps"}
 
-def krutidev_to_unicode(text: str) -> str:
+#: Profiles that need no conversion at all. For these the whole
+#: protect/convert/restore cycle is skipped, so nothing can be damaged.
+PASSTHROUGH = ("unicode", "english", "hinglish")
+
+# --------------------------------------------------------------------------
+# Devanagari character classes used by the structural passes
+# --------------------------------------------------------------------------
+
+HALANT = "्"          # ्
+NUKTA = "़"           # ़
+
+# Dependent signs only. Independent vowels are deliberately excluded: a reph
+# never attaches across one. A space is NOT a matra -- treating it as one made
+# 'jke ksZ' come out as 'रार्म ो'.
+MATRAS = frozenset(
+    "ािीुूृॄॢॣ"   # ा ि ी ु ू ृ ॄ ॢ ॣ
+    "ॅॆेै"                                   # ॅ ॆ े ै
+    "ॉॊोौ"                                   # ॉ ॊ ो ौ
+    "ँंः"                                         # ँ ं ः
+    + NUKTA
+)
+
+# --------------------------------------------------------------------------
+# Profile definitions
+# --------------------------------------------------------------------------
+
+# Keys that can sit between the two halves of a Walkman two-key letter.
+_WALKMAN_MEDIALS = r"[sSqwkah`‚¡]{0,2}"
+
+_WALKMAN_PRE: Sequence[Tuple[str, str]] = (
+    # In Walkman-Chanakya 905 the code 'Q' is a hook glyph that reshapes the
+    # letter before it, so two keys make one letter. Rewrite to the canonical
+    # single-letter spelling before the map runs.
+    (rf"o({_WALKMAN_MEDIALS})Q", r"d\1"),     # o..Q -> क..   (osQ के, oqQ कु)
+    (rf"i({_WALKMAN_MEDIALS})Q", r"Q\1"),     # i..Q -> फ..   (iQ फ, lkiQ साफ)
+    (r"mQ", "Å"),                         # mQ   -> ऊ
+)
+
+# Spelling variants, normalised first so that _WALKMAN_PRE can then apply.
+_WALKMAN_PRE0: Sequence[Tuple[str, str]] = (
+    # An alternate spelling of "i" (प): I+kqQy and iqQy both render फुल.
+    (r"I\+k", "i"),
+)
+
+# Map entries where Walkman assigns a different letter from KrutiDev.
+# 'find' must already exist in array_one; 'insert_after' adds a new entry.
+_WALKMAN_OVERRIDES: Dict[str, str] = {
+    "=kk": "त्रा",   # त्रा  (was an intermediate "=k")
+    "f=k": "fत्र",        # fत्र  (was an intermediate "f=")
+    "¼": "द्ध",      # ¼ -> द्ध   (KrutiDev: "(" )
+    "½": "ऋ",                  # ½ -> ऋ     (KrutiDev: ")" )
+    "/": "ध",                  # /  -> ध     (KrutiDev: ध् )
+    "/k": "धा",           # /k -> धा    (KrutiDev: ध  )
+    # Punctuation. Walkman keeps ASCII brackets and quotes as punctuation
+    # where KrutiDev assigns them letters. Verified against the embedded
+    # font: "(d)" is "(क)", "lqy>k,¡_" is "सुलझाएँ;", "^x*" is "‘ग’".
+    "\u00df": "\u0939\u094d\u0930",   # ß -> ह्र  (ßkl ह्रास; KrutiDev gives a quote)
+    "(": "(",
+    ")": ")",
+    "^": "\u2018",
+    "*": "\u2019",
+}
+
+# New entries, inserted immediately after the named existing key.
+_WALKMAN_INSERTS: Sequence[Tuple[str, str, str]] = (
+    ("f=k", "=k", "त्र"),  # =k -> त्र, after the =kk/f=k pair
+)
+
+# Entries with no KrutiDev counterpart, tried before everything else.
+_WALKMAN_PREPEND: Sequence[Tuple[str, str]] = (
+    # Decomposed nukta (ज + ़), matching the rest of the map. The precomposed
+    # U+095B is not NFC-stable, so emitting it would give two spellings of the
+    # same word depending on the code path.
+    ("\u201dk", "\u091c\u093c"),           # ”k -> ज़   (rs”k तेज़)
+    ("\u201d", "\u091c\u093c\u094d"),      # ”  -> ज़्  (”;knk ज़्यादा)
+)
+
+# Entries that must run last, because their replacement is a character an
+# earlier entry would otherwise consume ("_" -> ";" and ";" -> य).
+_WALKMAN_APPEND: Sequence[Tuple[str, str]] = (
+    ("_", ";"),
+)
+
+
+def _build_map(profile: str) -> Tuple[List[str], List[str]]:
+    one, two = list(array_one), list(array_two)
+    if profile != "walkman":
+        return one, two
+    for key, val in _WALKMAN_OVERRIDES.items():
+        two[one.index(key)] = val
+    for after, key, val in _WALKMAN_INSERTS:
+        pos = one.index(after) + 1
+        one.insert(pos, key)
+        two.insert(pos, val)
+    for key, val in reversed(_WALKMAN_PREPEND):
+        one.insert(0, key)
+        two.insert(0, val)
+    for key, val in _WALKMAN_APPEND:
+        if key in one:
+            idx = one.index(key)
+            one.pop(idx)
+            two.pop(idx)
+        one.append(key)
+        two.append(val)
+    return one, two
+
+
+_COMPILED: Dict[str, List[Tuple["re.Pattern", str]]] = {}
+
+
+def _compiled(profile: str) -> List[Tuple["re.Pattern", str]]:
+    if profile not in _COMPILED:
+        one, two = _build_map(profile)
+        _COMPILED[profile] = [
+            (re.compile(re.escape(a)), b.replace("\\", "\\\\")) for a, b in zip(one, two)
+        ]
+    return _COMPILED[profile]
+
+
+# --------------------------------------------------------------------------
+# Structural passes
+# --------------------------------------------------------------------------
+
+def _apply_short_i(text: str, trigger: str = "f", matra: str = "ि") -> str:
+    """Move the pre-posed short-i matra to after the letter it belongs to.
+
+    Left to right, index-safe. The previous implementation used a global
+    str.replace inside a find() loop, so every edit invalidated the cursor.
+    A safe token is never treated as a letter: attaching a matra to a
+    protected English word is always wrong.
     """
-    Converts a KrutiDev/Devlys encoded string into standard Devanagari Unicode.
+    step = len(trigger)
+    out: List[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        if text.startswith(trigger, i) and i + step < n:
+            nxt = text[i + step]
+            if is_marker(nxt):
+                out.append(text[i:i + step])
+                i += step
+                continue
+            out.append(nxt)
+            out.append(matra)
+            i += step + 1
+            continue
+        out.append(text[i])
+        i += 1
+    return "".join(out)
+
+
+def _repair_matra_halant(text: str, matra: str = "ि") -> str:
+    """Fix `<matra><halant><consonant>` into `<halant><consonant><matra>`.
+
+    Produced when the short-i pass lands on the first half of a conjunct.
     """
+    out = list(text)
+    i = 0
+    while i < len(out) - 2:
+        if out[i] == matra and out[i + 1] == HALANT:
+            cons = out[i + 2]
+            out[i:i + 3] = [HALANT, cons, matra]
+            i += 3
+            continue
+        i += 1
+    return "".join(out)
+
+
+def _apply_reph(text: str, trigger: str = "Z") -> str:
+    """Move the reph mark to the front of the cluster it belongs to.
+
+    Rewritten from the original find/replace loop, which had three defects:
+    a `Z` at index 0 aborted the whole pass, str.replace applied every edit
+    globally, and the matra set was a space-separated string so a space
+    counted as a matra and the scan ran into the previous word.
+    """
+    out: List[str] = []
+    for ch in text:
+        if ch != trigger:
+            out.append(ch)
+            continue
+        j = len(out)
+        while j > 0 and out[j - 1] in MATRAS:
+            j -= 1
+        if j == 0:
+            continue                       # nothing to attach to; drop it
+        k = j - 1                          # last letter of the cluster
+        while k - 1 >= 1 and out[k - 1] == HALANT:
+            k -= 2                         # step to the head of the conjunct
+        if k < 0 or is_marker(out[k]):
+            continue
+        out[k:k] = ["र", HALANT]      # र्
+    return "".join(out)
+
+
+_CLEANUP = (
+    ("ंे", "ें"),      # ंे -> ें
+    ("ंो", "ों"),      # ंो -> ों
+    ("ाे", "ो"),            # ाे -> ो
+    ("ाॅ", "ॉ"),       # ा + ॅ -> ॉ  (the fonts compose ॉ from two marks)
+    ("आॅ", "ऑ"),       # आ + ॅ -> ऑ
+    ("एॅ", "ऍ"),       # ए + ॅ -> ऍ
+)
+
+
+def _convert_latin(text: str, profile: str) -> str:
     if not text:
         return ""
-    
-    modified_substring = text
-    modified_substring = modified_substring.replace("osQ", "के")
-    modified_substring = modified_substring.replace("oSQ", "कै")
 
-    # Step 1: Replace characters mapped directly in the arrays
-    for i in range(len(array_one)):
-        pattern = re.compile(escape_regex(array_one[i]))
-        modified_substring = pattern.sub(array_two[i], modified_substring)
+    s = text
+    if profile == "walkman":
+        for pat, rep in _WALKMAN_PRE0:
+            s = re.sub(pat, rep, s)
+        for pat, rep in _WALKMAN_PRE:
+            s = re.sub(pat, rep, s)
+    # No 'osQ -> के' shortcut here: KRDEV010 renders osQ as वेफ. Documents that
+    # really mean के are Walkman-Chanakya and are routed to that profile.
 
-    # Step 2: Handle special combinations and rules
-    modified_substring = re.sub(r'±', "Zं", modified_substring)
-    modified_substring = re.sub(r'Æ', "र्f", modified_substring)
+    for pattern, repl in _compiled(profile):
+        s = pattern.sub(repl, s)
 
-    # Fix short 'i' matra (ि)
-    position_of_i = modified_substring.find("f")
-    while position_of_i != -1:
-        if position_of_i + 1 < len(modified_substring):
-            character_next_to_i = modified_substring[position_of_i + 1]
-            character_to_be_replaced = "f" + character_next_to_i
-            modified_substring = modified_substring.replace(character_to_be_replaced, character_next_to_i + "ि")
-        position_of_i = modified_substring.find("f", position_of_i + 1)
+    s = re.sub(r"±", "Zं", s)      # ± -> reph + anusvara
+    s = re.sub(r"Æ", "Zf", s)           # Æ -> reph + short-i
+    s = re.sub(r"£", "Zf", s)           # £ -> reph + short-i
+    # NOTE: £ used to be expanded after the short-i pass, which left a bare
+    # 'f' in the output for every word that used it.
 
-    modified_substring = re.sub(r'Ç', "fa", modified_substring)
-    modified_substring = re.sub(r'É', "र्fa", modified_substring)
-    modified_substring = re.sub(r'£', "र्f", modified_substring)
-    modified_substring = re.sub(r'¯', "fa", modified_substring)
-    modified_substring = modified_substring.replace("ð", "")
+    s = _apply_short_i(s, "f")
 
-    position_of_i = modified_substring.find("fa")
-    while position_of_i != -1:
-        if position_of_i + 2 < len(modified_substring):
-            character_next_to_ip2 = modified_substring[position_of_i + 2]
-            character_to_be_replaced = "fa" + character_next_to_ip2
-            modified_substring = modified_substring.replace(character_to_be_replaced, character_next_to_ip2 + "िं")
-        position_of_i = modified_substring.find("fa", position_of_i + 2)
+    s = re.sub(r"Ç", "fa", s)
+    s = re.sub(r"É", "Zfa", s)
+    s = re.sub(r"¯", "fa", s)
+    s = s.replace("ð", "")
 
-    modified_substring = re.sub(r'Ê', "ीZ", modified_substring)
+    s = _apply_short_i(s, "fa", "िं")
+    s = re.sub(r"Ê", "ीZ", s)      # Ê -> ी + reph
 
-    position_of_wrong_ee = modified_substring.find("ि्")
-    while position_of_wrong_ee != -1:
-        if position_of_wrong_ee + 2 < len(modified_substring):
-            consonant_next_to_wrong_ee = modified_substring[position_of_wrong_ee + 2]
-            character_to_be_replaced = "ि्" + consonant_next_to_wrong_ee
-            modified_substring = modified_substring.replace(character_to_be_replaced, "्" + consonant_next_to_wrong_ee + "ि")
-        position_of_wrong_ee = modified_substring.find("ि्", position_of_wrong_ee + 2)
+    s = _repair_matra_halant(s)
+    s = _apply_reph(s)
 
-    # Reorder 'R' matras (र्)
-    set_of_matras = "अ आ इ ई उ ऊ ए ऐ ओ औ ा ि ी ु ू ृ े ै ो ौ ं : ँ ॅ"
-    position_of_R = modified_substring.find("Z")
-    
-    while position_of_R > 0:
-        probable_position_of_half_r = position_of_R - 1
-        character_at_probable_position_of_half_r = modified_substring[probable_position_of_half_r]
+    for a, b in _CLEANUP:
+        s = s.replace(a, b)
+    # One spelling per word: NFC leaves the decomposed nukta alone but tidies
+    # anything else the map may have produced in two forms.
+    return unicodedata.normalize("NFC", s)
 
-        while character_at_probable_position_of_half_r in set_of_matras and probable_position_of_half_r >= 0:
-            probable_position_of_half_r -= 1
-            if probable_position_of_half_r >= 0:
-                character_at_probable_position_of_half_r = modified_substring[probable_position_of_half_r]
 
-        if probable_position_of_half_r >= 0:
-            substring_to_be_replaced = modified_substring[probable_position_of_half_r:position_of_R + 1]
-            replace_with = "र्" + modified_substring[probable_position_of_half_r:position_of_R]
-            modified_substring = modified_substring.replace(substring_to_be_replaced, replace_with)
+def krutidev_to_unicode(text: str) -> str:
+    """Convert KrutiDev 010 / DevLys 010 text."""
+    return _convert_latin(text, "krutidev")
 
-        position_of_R = modified_substring.find("Z", position_of_R + 1)
 
-    # Final cleanup for common spacing/matra bugs
-    modified_substring = modified_substring.replace("ंे", "ें")
-    modified_substring = modified_substring.replace("ंो", "ों")
-    modified_substring = modified_substring.replace("ाे", "ो")
+def walkman_to_unicode(text: str) -> str:
+    """Convert Walkman-Chanakya 905 text (NCERT Hindi textbooks)."""
+    return _convert_latin(text, "walkman")
 
-    # Fix common KrutiDev typist visual hacks that become typos in Unicode
-    modified_substring = modified_substring.replace("ध्कि", "धिक")
-    modified_substring = modified_substring.replace("पफ", "फ")
 
-    return modified_substring
+# --------------------------------------------------------------------------
+# Byte re-interpretation
+# --------------------------------------------------------------------------
+
+# Some producers report a legacy 8-bit stream through a MacRoman ToUnicode
+# map, so the same font bytes surface as different characters. These appear in
+# a MacRoman reading and in neither legacy map, so they identify the case
+# without false positives: measured at 23% of the non-ASCII characters in one
+# such book and zero occurrences across the Windows-encoded ones.
+_MACROMAN_HINT = re.compile("[\u2044\u2211\u25ca\ufb02\u02dd\u220f\u00f8\u03c0\uf8ff]")
+
+
+def _build_macroman_table():
+    """MacRoman character -> the Windows-1252 character for the same byte.
+
+    A translation table rather than encode/decode, because the string may hold
+    safe tokens and Devanagari that MacRoman cannot encode. Round-tripping
+    through bytes dropped those silently and corrupted the text around them.
+    Byte values below 0x80 are identical in both, so they are left alone.
+    """
+    table = {}
+    for byte in range(0x80, 0x100):
+        raw = bytes([byte])
+        try:
+            mac = raw.decode("mac_roman")
+            win = raw.decode("cp1252")
+        except UnicodeDecodeError:
+            continue
+        if mac != win:
+            table[ord(mac)] = win
+    return table
+
+
+_MACROMAN_TABLE = _build_macroman_table()
+
+
+# The Markdown extractor expands the fi/fl ligatures to plain letter pairs
+# before this module sees them, and in MacRoman those two code points are the
+# bytes 0xDE and 0xDF -- which carry letters, not ligatures, in a legacy font.
+# Recomposing is safe here: under the Chanakya map "fl" and "fi" would decode
+# to द्घद्य and द्घद्ब, two half-conjuncts in a row, which Devanagari never has.
+_LIGATURES = (("fi", "\ufb01"), ("fl", "\ufb02"))
+
+
+def normalise_legacy_encoding(text: str) -> str:
+    """Re-read a MacRoman-reported legacy stream as Windows-1252.
+
+    A no-op for everything else, and idempotent: the marker characters cannot
+    survive the translation.
+    """
+    if not text:
+        return text
+    if len(_MACROMAN_HINT.findall(text)) < max(8, len(text) * 0.005):
+        return text
+    for plain, ligature in _LIGATURES:
+        text = text.replace(plain, ligature)
+    return text.translate(_MACROMAN_TABLE)
+
+
+# --------------------------------------------------------------------------
+# Detection
+# --------------------------------------------------------------------------
+
+_DEVANAGARI = re.compile(r"[ऀ-ॿ]")
+_LATIN = re.compile(r"[A-Za-z]")
+
+# Two-key sequences that only make sense in Walkman-Chanakya. In KrutiDev they
+# would spell वेफ / वुफ / पफ, which are not Hindi words.
+_WALKMAN_SIG = re.compile(r"o[sSqwkah`]{0,2}Q|i[sSqwkah`]{0,2}Q|mQ")
+
+# Multi-character Chanakya signatures. Single characters like Ü or ß are not
+# usable: they occur in KrutiDev too.
+_CHANAKYA_SIG = re.compile(r"ãñ|¥æ|·¤|ðU|Ð|Áè|ãè|æ¢")
+
+# APS-DV-Priyanka. "eâ" is its shaping pair and "Deeb"/"kesâ"/"efJe" are
+# everyday words; none of them mean anything in the other encodings.
+_APS_SIG = re.compile(r"eâ|kesâ|efJe|Deeb|ceW|Ùeg")
+
+# Whole tokens only. Without the boundaries these matched inside ordinary
+# English ("also", "these", "worlds"), which made a plain English document
+# look like KrutiDev.
+_KRUTI_SIG = re.compile(
+    r"\b(vkSj|gS|gSa|gSaA|ds|dh|dk|dks|esa|ls|ij|fd|;g|og|ugha|Fkk|Fks|gks|dj|"
+    r"ftl|bl|ml|;s|oS|ijarq|rFkk)\b"
+)
+
+_TOKEN = re.compile(r"\b[A-Za-z;'\"]+\b")
+
+#: Legacy signatures per Latin token needed to claim a legacy profile.
+#: Measured: real legacy documents run 0.089-0.165; English prose and
+#: unsupported encodings score 0.000.
+_LEGACY_RATIO = 0.02
+
 
 def auto_detect_font(text: str) -> str:
+    """Return the encoding profile for *text*.
+
+    Order matters. A document that is already Devanagari must never be pushed
+    through a legacy map: the old detector counted the substrings 'ds' and 'dh'
+    anywhere, so a Unicode Hindi page containing the English words 'kids' or
+    'and the' was classified as KrutiDev and destroyed.
     """
-    Detects if the legacy font used is KrutiDev or Chanakya based on character frequencies.
-    Returns 'krutidev', 'chanakya', or 'unicode' for modern English/Hinglish/Hindi text.
-    """
-    # KrutiDev features: 'vkSj' (और), 'gS' (है), 'gksrh' (होती), 'Hkkjr' (भारत)
-    # Note: DO NOT use 'ds' or 'dh' as they trigger massive false-positives on English text (e.g. 'words', 'adhere')
-    krutidev_score = text.count('vkSj') + text.count('gS') + text.count('osQ') + text.count('gksrh') + text.count('Hkkjr')
-    
-    # Chanakya features: '¥õÚ' / '¥æõÚ' (और), 'ãñ' (है), '·¤' (क), 'ß' (व), 'Ü' (ल)
-    chanakya_score = text.count('¥') + text.count('ãñ') + text.count('·') + text.count('ß') + text.count('Ü')
-    
-    if chanakya_score == 0 and krutidev_score == 0:
-        return 'unicode'
-    if chanakya_score > krutidev_score * 1.5:
-        return 'chanakya'
-    return 'krutidev'
+    if not text:
+        return "unicode"
 
-# Cache the English words so we only load it once
-_ENGLISH_WORDS = None
+    text = normalise_legacy_encoding(text)
+    deva = len(_DEVANAGARI.findall(text))
+    latin = len(_LATIN.findall(text))
+    tokens = len(_TOKEN.findall(text)) or 1
 
-def _get_english_words():
-    global _ENGLISH_WORDS
-    if _ENGLISH_WORDS is None:
-        try:
-            # We use the Brown corpus which is much smaller (~40k words) and prevents 
-            # obscure valid KrutiDev strings like "tula" (जनसं) from being bypassed.
-            nltk.download('brown', quiet=True)
-            from nltk.corpus import brown
-            _ENGLISH_WORDS = set(w.lower() for w in brown.words() if w.isalpha())
-        except Exception:
-            # Fallback to an empty set if NLTK fails
-            _ENGLISH_WORDS = set()
-    return _ENGLISH_WORDS
+    walkman = len(_WALKMAN_SIG.findall(text))
+    chanakya = len(_CHANAKYA_SIG.findall(text))
+    kruti = len(_KRUTI_SIG.findall(text))
 
-def is_english_word(word: str) -> bool:
-    """Returns True if the word is found in our English dictionary."""
-    if not word.strip():
-        return False
-    # If the word contains numbers or punctuation, don't treat it as a pure English dictionary word
-    if not word.isalpha():
-        return False
-        
-    return word.lower() in _get_english_words()
+    # Already mostly Devanagari: nothing to convert, whatever stray legacy
+    # sequences appear. This covers a Hindi article that merely quotes "osQ"
+    # as an example. Measured on real files, documents needing conversion sit
+    # at a Devanagari/Latin ratio of 0.00 and documents needing passthrough at
+    # 2.5 and above, so the boundary is not delicate.
+    if deva > latin:
+        return "hinglish" if latin > deva * 0.25 else "unicode"
 
-def convert_legacy_text(text: str, font: str = 'auto') -> str:
-    if font == 'auto':
+    # Otherwise legacy evidence is weighed before the script census. A book can carry a
+    # Unicode heading or an OCR'd caption over pages of KrutiDev; letting a
+    # handful of Devanagari characters veto that left the whole file
+    # unconverted. Devanagari already in the text is unaffected by conversion,
+    # since none of it appears in the legacy maps.
+    aps = len(_APS_SIG.findall(text))
+    if aps > max(kruti, walkman, chanakya):
+        return "aps"
+    if chanakya > max(kruti, walkman):
+        return "chanakya"
+    if walkman:
+        # These two-key sequences spell वेफ / पफ / उफ under KrutiDev, so they
+        # are decisive rather than merely suggestive.
+        return "walkman"
+    if kruti / tokens >= _LEGACY_RATIO:
+        return "krutidev"
+
+    # No usable legacy evidence. An unsupported encoding lands here too, which
+    # is the safe outcome: no conversion beats a confidently wrong one.
+    if deva:
+        return "hinglish" if latin > deva * 0.25 else "unicode"
+    return "english" if latin else "unicode"
+
+
+def convert_legacy_text(text: str, font: str = "auto") -> str:
+    font = (font or "auto").lower()
+    if font == "auto":
         font = auto_detect_font(text)
-        
-    if font == 'unicode' or font == 'english':
+    font = _ALIASES.get(font, font)
+
+    if font in PASSTHROUGH:
         return text
-        
-    if font == 'chanakya':
+    text = normalise_legacy_encoding(text)
+    if font == "chanakya":
         return chanakya_to_unicode(text)
-    else:
-        # Defaults to krutidev (which also perfectly handles devlys)
-        return krutidev_to_unicode(text)
+    if font == "aps":
+        return aps_to_unicode(text)
+    if font == "walkman":
+        return _convert_latin(text, "walkman")
+    return _convert_latin(text, "krutidev")

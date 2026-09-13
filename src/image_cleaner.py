@@ -27,7 +27,8 @@ nothing at all to an image that is already in good shape. If OCR quality
 matters more than anything, raise ``--ocr-dpi`` before reaching for this.
 """
 
-from typing import Optional, Tuple
+import contextlib
+from typing import Optional
 
 __all__ = [
     "enhance_pdf_images",
@@ -45,6 +46,8 @@ def _cv():
     try:
         import cv2
         import numpy as np
+        with contextlib.suppress(Exception):
+            cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_SILENT)
         return cv2, np
     except ImportError as exc:
         raise OpenCVMissing(
@@ -66,7 +69,7 @@ def opencv_available() -> bool:
 # --------------------------------------------------------------------------
 
 def _blur_score(gray) -> float:
-    cv2, np = _cv()
+    cv2, _ = _cv()
     return float(cv2.Laplacian(gray, cv2.CV_64F).var())
 
 
@@ -79,7 +82,7 @@ def _noise_score(gray) -> float:
 
 def _uneven_lighting(gray) -> float:
     """Spread of local background levels across the page."""
-    cv2, np = _cv()
+    cv2, _ = _cv()
     small = cv2.resize(gray, (32, 32), interpolation=cv2.INTER_AREA)
     return float(small.std())
 
@@ -91,7 +94,7 @@ def _blockiness(gray) -> float:
     grid. Upscaling one magnifies the block edges along with the strokes, which
     measured worse for OCR, so this gates the upscale.
     """
-    cv2, np = _cv()
+    _, np = _cv()
     g = gray.astype("float32")
     dx = np.abs(np.diff(g, axis=1))
     if dx.shape[1] < 16:
@@ -121,7 +124,7 @@ def _estimate_text_height(binary) -> float:
 
 def _remove_background(gray, strength: int = 31):
     """Divide out a smooth background: shading, bleed-through, watermarks."""
-    cv2, np = _cv()
+    cv2, _ = _cv()
     k = max(3, strength | 1)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
     background = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
@@ -181,9 +184,9 @@ def enhance_image(
     raised mean CER from 0.178 to 0.216. It is kept as an option for callers
     feeding something other than Tesseract.
     """
-    cv2, np = _cv()
+    cv2, _ = _cv()
 
-    gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
     if remove_background is None:
         remove_background = _uneven_lighting(gray) > 28
@@ -232,6 +235,29 @@ def enhance_image(
     return gray
 
 
+def _image_array(doc, xref, np):
+    """One embedded image as an HxW or HxWx3 uint8 array, or None."""
+    import pymupdf
+
+    try:
+        pix = pymupdf.Pixmap(doc, xref)
+    except Exception:
+        return None
+    try:
+        if pix.alpha or pix.n > 3:
+            pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
+        if pix.n not in (1, 3):
+            return None
+        data = np.frombuffer(pix.samples, dtype=np.uint8)
+        expected = pix.height * pix.width * pix.n
+        if data.size != expected:
+            return None
+        shape = (pix.height, pix.width) if pix.n == 1 else (pix.height, pix.width, 3)
+        return data.reshape(shape)
+    except Exception:
+        return None
+
+
 def enhance_pdf_images(
     input_path: str,
     output_path: str,
@@ -251,13 +277,10 @@ def enhance_pdf_images(
         for page in doc:
             for info in page.get_images(full=True):
                 xref = info[0]
-                try:
-                    base = doc.extract_image(xref)
-                except Exception:
-                    continue
-
-                img = cv2.imdecode(np.frombuffer(base["image"], np.uint8),
-                                   cv2.IMREAD_COLOR)
+                # Decode through PyMuPDF, not cv2.imdecode: OpenCV has no
+                # JPEG2000 support in the headless wheel and logs a C++ error
+                # straight to stderr for every JPX image in the file.
+                img = _image_array(doc, xref, np)
                 if img is None or min(img.shape[:2]) < 16:
                     continue
 

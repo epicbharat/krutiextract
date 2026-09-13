@@ -12,7 +12,7 @@ import sys
 from collections import Counter
 
 sys.path.insert(0, ".")
-from src.pdf_spans import latin_spans           # noqa: E402
+from src.pdf_spans import latin_spans
 
 TOKEN = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9]{2,}(?![A-Za-z0-9])")
 

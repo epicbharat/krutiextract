@@ -44,10 +44,8 @@ def _captured_messages(buffer):
             _warnings.simplefilter("ignore", RuntimeWarning)
             yield
     finally:
-        try:
+        with contextlib.suppress(Exception):
             set_messages(fd=2)
-        except Exception:
-            pass
 
 
 def _layout_backend_active() -> bool:
@@ -77,10 +75,33 @@ def ocr_available() -> bool:
         return False
 
 
+def _check_readable(pdf_path: str) -> None:
+    """Fail early with a message that says what is actually wrong.
+
+    Left to pymupdf4llm, a password-protected file surfaces as
+    "'NoneType' object is not subscriptable".
+    """
+    try:
+        import pymupdf
+    except ImportError:
+        return
+    try:
+        doc = pymupdf.open(pdf_path)
+    except Exception as exc:
+        raise ExtractionError(f"{pdf_path}: {exc}") from exc
+    try:
+        if doc.needs_pass:
+            raise ExtractionError(f"{pdf_path}: password protected")
+        if doc.page_count == 0:
+            raise ExtractionError(f"{pdf_path}: no pages")
+    finally:
+        doc.close()
+
+
 def extract_raw_markdown(
     pdf_path: str,
     ocr: bool = True,
-    ocr_language: str = "hin",
+    ocr_language: str = "hin+eng",
     ocr_dpi: int = 400,
     pages: Optional[Sequence[int]] = None,
     warnings: Optional[List[str]] = None,
@@ -89,11 +110,19 @@ def extract_raw_markdown(
 
     Raises ExtractionError rather than returning None, so a failed file is
     never silently written out as an empty document.
+
+    ``ocr_language`` defaults to "hin+eng" because the cost is asymmetric.
+    Measured on a Hindi text column, "hin" alone scores 0.006 CER against
+    0.026 for "hin+eng" -- but on a scanned English page "hin" alone produced
+    909 Devanagari characters and 18 Latin ones, which is unusable. Two points
+    of Hindi accuracy is a fair price for not destroying English pages.
     """
     try:
         import pymupdf4llm
     except ImportError as exc:
         raise ExtractionError("pymupdf4llm is not installed") from exc
+
+    _check_readable(pdf_path)
 
     kwargs = {"force_text": True}
     if pages is not None:

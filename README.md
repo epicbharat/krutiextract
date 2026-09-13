@@ -4,7 +4,8 @@
   <h1>KrutiExtract</h1>
   <p><strong>Legacy Hindi PDF to Markdown</strong></p>
 
-  [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+  [![tests](https://github.com/epicbharat/krutiextract/actions/workflows/ci.yml/badge.svg)](https://github.com/epicbharat/krutiextract/actions/workflows/ci.yml)
+  [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 </div>
 
@@ -18,6 +19,9 @@ the non-word आरै.
 KrutiExtract reads the logical character stream instead of the visual order, so
 the typist's keystrokes survive intact, then maps them to Unicode.
 
+**New here? Start with the [How-To Guide](docs/GUIDE.md)** — install, first
+conversion, choosing a profile, batch runs, OCR tuning and troubleshooting.
+
 ## Encodings
 
 These are different fonts with conflicting rules, not dialects of one map.
@@ -29,6 +33,7 @@ is detected per document.
 | `krutidev` (alias `devlys`) | KrutiDev 010, DevLys 010 | त्रा | वेफ | `;` |
 | `walkman` (alias `ncert`) | Walkman-Chanakya 905 | त्र | के | `(` |
 | `chanakya` | Chanakya | — | — | — |
+| `aps` (alias `priyanka`) | APS-DV-Priyanka | — | — | — |
 
 Three more profiles convert nothing and are detected the same way:
 `unicode` (already Devanagari), `hinglish` (Devanagari mixed with a lot of
@@ -67,6 +72,15 @@ swapped out for opaque Private Use characters and restored afterwards:
 
 ```bash
 pip install krutiextract
+```
+
+The version currently on PyPI is 1.0.7, whose console script points at a
+module that does not exist. Until 1.2.0 is published, install from source:
+
+```bash
+git clone https://github.com/epicbharat/krutiextract.git
+cd krutiextract
+pip install -e ".[ocr]"
 ```
 
 Image enhancement for scans is optional:
@@ -156,7 +170,12 @@ measurement of each image indicates:
 | skewed | rotate to the dominant text angle | — |
 
 Overall it moved mean CER from 0.272 to 0.259 at a 75 dpi source, with no case
-made worse. Three things it deliberately does **not** do, because each measured
+made worse. Rerun the whole measurement on your own material with:
+
+```bash
+python tools/benchmark_ocr.py sample.pdf 2 100 75
+```
+ Three things it deliberately does **not** do, because each measured
 worse: binarise before Tesseract (0.178 → 0.216 — modern LSTM Tesseract wants
 grayscale and does its own thresholding), sharpen a blurred scan (0.702 →
 0.724), and upscale a heavily JPEG-compressed image.
@@ -167,12 +186,13 @@ detail the scan never captured.
 
 ## Known limits
 
-- **Three encodings are verified, not all of them.** KrutiDev 010, DevLys 010,
-  Walkman-Chanakya 905 and Chanakya are anchored to their fonts and to a
-  rendered book. Shree-Lipi, Shusha, APS, Akruti, ISM and the other KrutiDev
-  variants are *not* covered and will not convert correctly. If you have a
-  sample, open an issue: adding a profile is mechanical once the font is in
-  hand.
+- **Five encodings are verified, not all of them.** KrutiDev 010, DevLys 010,
+  Walkman-Chanakya 905, Chanakya and APS-DV-Priyanka are each anchored to
+  their font and to a rendered book. Shree-Lipi, Shusha, Akruti, ISM and other
+  variants are not covered. A legacy font with no mapping is detected and reported rather than
+  converted wrongly — see [docs/APS-DV-PRIYANKA.md](docs/APS-DV-PRIYANKA.md)
+  for how far one such encoding has been worked out, and
+  `tools/glyph_sheet.py` for reading a new one off its own pages.
 - A legacy word is also a run of ASCII letters, so an isolated English word
   with no font evidence can be misread as Hindi, and vice versa. Font evidence
   resolves this whenever the source PDF has it; OCR output does not.
@@ -183,7 +203,15 @@ detail the scan never captured.
 ## Contributing
 
 If a PDF breaks the extraction, please open an issue and attach it. A sample
-that uses a fourth encoding is especially useful.
+that uses an unsupported encoding is especially useful — section 9 of the
+[How-To Guide](docs/GUIDE.md) describes how a profile gets built from the
+font, and the method matters more than the table: never guess a mapping, read
+it off the glyphs.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). Version 1.2.0 separated the KrutiDev and
+Walkman-Chanakya profiles, which had been conflated into a single map.
 
 ## License
 

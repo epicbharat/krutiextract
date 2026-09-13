@@ -16,14 +16,14 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import numpy as np                      # noqa: E402
-import cv2                              # noqa: E402
-import pymupdf                          # noqa: E402
-import pytesseract                      # noqa: E402
+import cv2
+import numpy as np
+import pymupdf
+import pytesseract
 
-from src.converter import convert_legacy_text          # noqa: E402
-from src.image_cleaner import enhance_image            # noqa: E402
-from src.markdown_utils import (                       # noqa: E402
+from src.converter import convert_legacy_text
+from src.image_cleaner import enhance_image
+from src.markdown_utils import (
     protect_non_hindi_syntax,
     restore_non_hindi_syntax,
 )
@@ -65,7 +65,7 @@ def degrade(case: str, gray, rng):
     if case == "noisy":
         return np.clip(gray.astype(float) + rng.normal(0, 20, gray.shape), 0, 255).astype(np.uint8)
     if case == "jpeg":
-        ok, buf = cv2.imencode(".jpg", gray, [cv2.IMWRITE_JPEG_QUALITY, 15])
+        _, buf = cv2.imencode(".jpg", gray, [cv2.IMWRITE_JPEG_QUALITY, 15])
         return cv2.imdecode(buf, cv2.IMREAD_GRAYSCALE)
     if case == "washed":
         yy, xx = np.mgrid[0:h, 0:w]

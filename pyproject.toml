@@ -4,31 +4,64 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "krutiextract"
-version = "1.0.8"
+version = "1.3.0"
 authors = [
-  { name="Bharat Choudhary (Lecturer, Department of Secondary Education, Govt. of Rajasthan)", email="epicbharat@gmail.com" },
+  { name="Bharat Choudhary", email="epicbharat@gmail.com" },
 ]
-description = "A universal toolkit for extracting legacy Hindi PDFs (KrutiDev/Devlys/Chanakya) to Markdown"
+description = "Extract legacy Hindi PDFs (KrutiDev / DevLys / Walkman-Chanakya / Chanakya) to Markdown"
 readme = "README.md"
-requires-python = ">=3.8"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Text Processing :: Linguistic",
-    "Natural Language :: Hindi"
+    "Natural Language :: Hindi",
 ]
 dependencies = [
     "pymupdf",
     "pymupdf4llm",
     "nltk",
-    "opencv-python-headless",
-    "numpy"
 ]
 
+[project.optional-dependencies]
+ocr = ["opencv-python-headless", "numpy"]
+dev = ["pytest"]
+
 [project.scripts]
-krutiextract = "hindi_pdf_extractor.src.cli:main"
+krutiextract = "krutiextract.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/epicbharat"
+Homepage = "https://github.com/epicbharat/krutiextract"
 "Bug Tracker" = "https://github.com/epicbharat/krutiextract/issues"
+
+# The package lives in src/ on disk but installs as `krutiextract`. Without
+# this, setuptools read src/ as a src-layout root and installed cli.py,
+# converter.py and friends as top-level modules, which both collided with
+# other packages and broke every relative import.
+[tool.setuptools]
+package-dir = {"krutiextract" = "src"}
+packages = ["krutiextract"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "SIM", "RUF"]
+ignore = [
+    "RUF001",  # ambiguous unicode in strings: this project is about Devanagari
+    "RUF002",
+    "RUF003",
+    "RUF022",  # __all__ is grouped by meaning, not alphabetically
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Verbatim map dumps and a generated table: line length is not meaningful.
+"src/krutidev_map.py" = ["E501"]
+"src/chanakya_map.py" = ["E501"]
+"src/legacy_profile.py" = ["E501"]

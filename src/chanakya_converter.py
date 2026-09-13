@@ -18,7 +18,7 @@ def chanakya_to_unicode(text: str) -> str:
         return ""
 
     # Imported here to avoid a circular import at module load.
-    from .converter import _apply_reph, _apply_short_i, _repair_matra_halant, _CLEANUP
+    from .converter import _CLEANUP, _apply_reph, _apply_short_i, _repair_matra_halant
 
     s = text
     for a, b in zip(array_one, array_two):

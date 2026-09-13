@@ -62,3 +62,6 @@ test_output.txt
 # Logo/banner tooling, not part of the package
 crop_*.py
 make_*.py
+
+# Font archives are licensed separately
+*.zip

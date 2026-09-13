@@ -237,7 +237,11 @@ def protect_non_hindi_syntax(
     #    meanings, so they must be shielded before conversion.
     text = re.sub(r"(?m)^\s*(?:-{3,}|\*{3,}|_{3,})\s*$", keep_match, text)
     text = re.sub(r"(?m)^(#{1,6}\s+)", keep_match, text)
-    text = re.sub(r"(?m)^(\s*)([-*+]\s+|\d+\.\s+|>\s+)", lambda m: m.group(1) + keep(m.group(2)), text)
+    text = re.sub(
+        r"(?m)^(\s*)([-*+]\s+|\d+\.\s+|>\s+)",
+        lambda m: m.group(1) + keep(m.group(2)),
+        text,
+    )
 
     # 6. Table structure. A delimiter row (|---|:--:|) is shielded whole,
     #    because '-' maps to '.' in the legacy maps; other rows keep their
@@ -294,9 +298,7 @@ def protect_non_hindi_syntax(
             return True
         if len(w) >= 4 and w.isupper() and w.isalpha():
             return True
-        if w[:1].isupper() and _dictionary_hit(w):
-            return True
-        return False
+        return bool(w[:1].isupper() and _dictionary_hit(w))
 
     def _in_parens(m: "re.Match") -> bool:
         before = text[max(0, m.start() - 1):m.start()]

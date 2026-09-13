@@ -11,23 +11,54 @@ import re
 from collections import Counter
 from typing import Set
 
-__all__ = ["latin_terms", "latin_spans", "font_report", "LEGACY_FONT_RE"]
+__all__ = [
+    "latin_terms",
+    "latin_spans",
+    "font_report",
+    "LEGACY_FONT_RE",
+    "SUPPORTED_FONT_RE",
+]
 
-# Families whose 8-bit code points carry Devanagari glyphs.
+# Families whose 8-bit code points carry Devanagari glyphs. Unicode Devanagari
+# fonts (Mangal, Nirmala UI, Aparajita, Kokila, Noto) must NOT be listed here:
+# text drawn in one needs no conversion.
 LEGACY_FONT_RE = re.compile(
     r"kruti|krutidev|dev\s*lys|devlys|chanakya|walkman|shree|shusha|shivaji|"
-    r"agra|amar|ajay|priya|richa|kundli|yogesh|aparajita|apsdv|bhasha|"
-    r"sanskrit\s*99|ml-|dvb-|akruti|susha",
+    r"agra|amar|ajay|priya|richa|kundli|yogesh|bhasha|"
+    r"aps-?dv|aps-?dv-?priyanka|priyanka|shree-?lipi|shree-?dev|"
+    r"sanskrit\s*99|ml-|dvb-|akruti|susha|ajanta|chandrika",
     re.I,
 )
+
+#: The subset of legacy families this build actually has a mapping for.
+#: A legacy font outside this set converts to nonsense, so the pipeline warns
+#: rather than letting a wrong profile be chosen silently.
+# Anchored on the left: "akruti" is a different, unsupported family and must
+# not match "kruti".
+SUPPORTED_FONT_RE = re.compile(
+    r"(?<![a-z])(kruti|dev\s*lys|devlys|chanakya|walkman|aps-?dv|priyanka)", re.I)
 
 _TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9.'\-]*[A-Za-z0-9]|[A-Za-z]")
 
 
+_STYLE_SUFFIX = re.compile(
+    # Only strip a style word that follows a lowercase letter or a digit.
+    # Splitting on "-" or stripping a bare "PS" turned "APS-DV-Priyanka" into
+    # "a", which made a legacy font look like an ordinary Latin one.
+    # "Roman" is deliberately absent: TimesNewRoman is a family name, not a
+    # style. A separator counts as a boundary too, for "Calibri-Bold".
+    r"(?:(?<=[a-z0-9])|(?<=[-_ ]))(Bold|Italic|Regular|Normal|Oblique|Light|Medium|MT|PS)+$"
+)
+
+
 def _family(font_name: str) -> str:
     name = re.sub(r"^[A-Z]{6}\+", "", font_name or "")
-    name = re.split(r"[,\-]", name)[0]
-    return re.sub(r"(Bold|Italic|Regular|Normal|Oblique|MT|PS)+$", "", name).strip().lower()
+    name = name.split(",")[0]
+    previous = None
+    while previous != name:
+        previous = name
+        name = _STYLE_SUFFIX.sub("", name)
+    return name.strip(" -_").lower()
 
 
 def latin_terms(pdf_path: str, min_len: int = 2) -> Set[str]:

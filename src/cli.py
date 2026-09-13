@@ -27,8 +27,11 @@ class _Style:
     """
 
     def __init__(self, stream):
-        self.on = hasattr(stream, "isatty") and stream.isatty() \
+        self.on = (
+            hasattr(stream, "isatty")
+            and stream.isatty()
             and os.environ.get("NO_COLOR") is None
+        )
 
     def _wrap(self, code, text):
         return f"\033[{code}m{text}\033[0m" if self.on else text
@@ -41,7 +44,9 @@ class _Style:
 
 
 def _human(seconds: float) -> str:
-    return f"{seconds:.1f}s" if seconds < 60 else f"{int(seconds // 60)}m{seconds % 60:02.0f}s"
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    return f"{int(seconds // 60)}m{seconds % 60:02.0f}s"
 
 
 def _process(pdf_path, out_md_path, args, style, label=""):
@@ -67,7 +72,7 @@ def _process(pdf_path, out_md_path, args, style, label=""):
         return False
     except KeyboardInterrupt:
         raise
-    except Exception as exc:                      # noqa: BLE001
+    except Exception as exc:
         print(f"      {style.red('failed')}  {type(exc).__name__}: {exc}",
               file=sys.stderr)
         return False
@@ -105,7 +110,7 @@ def main(argv=None) -> int:
     conv = parser.add_argument_group("conversion")
     conv.add_argument(
         "--font", "--profile", dest="font", default="auto",
-        choices=("auto",) + PROFILES, metavar="NAME",
+        choices=("auto", *PROFILES), metavar="NAME",
         help="auto (default), " + ", ".join(PROFILES),
     )
     conv.add_argument("--drop-pattern", action="append", metavar="REGEX",
@@ -115,8 +120,12 @@ def main(argv=None) -> int:
     ocr.add_argument("--ocr-dpi", type=int, default=400, metavar="N",
                      help="render resolution for OCR (default: 400). The "
                           "single biggest lever on OCR accuracy")
-    ocr.add_argument("--ocr-language", default="hin", metavar="LANG",
-                     help="Tesseract language (default: hin)")
+    ocr.add_argument(
+        "--ocr-language", default="hin+eng", metavar="LANG",
+        help="Tesseract languages (default: hin+eng). Use 'hin' alone for "
+             "Hindi-only scans: it measured 0.006 character error rate "
+             "against 0.026 for hin+eng. Use it for a mixed or English "
+             "document and the English is rendered as Devanagari nonsense.")
     ocr.add_argument("--no-ocr", action="store_true",
                      help="never OCR image-only pages")
     ocr.add_argument("--enhance-ocr", action="store_true",
