@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="assets/logo.png" alt="KrutiExtract Logo" width="200"/>
-  <h1>KrutiExtract</h1>
+  <img src="assets/banner.png" alt="KrutiExtract Banner" width="100%"/>
   <p><strong>A Universal Legacy Hindi PDF to Markdown Extractor</strong></p>
 
   [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
