@@ -34,6 +34,14 @@ When the toolkit encounters text trapped inside a scanned image, it seamlessly h
 
 Ensure you have Python 3.8+ installed.
 
+### Option 1: Install via PyPI (Recommended)
+You can easily install the toolkit directly from the Python Package Index:
+```bash
+pip install krutiextract
+```
+
+### Option 2: Install from Source
+If you want to contribute or modify the source code:
 ```bash
 # Clone the repository
 git clone https://github.com/epicbharat/krutiextract.git
@@ -46,8 +54,11 @@ venv\Scripts\activate  # On Windows
 
 # Install dependencies
 pip install -r requirements.txt
+```
 
-# Download the required NLTK English word corpus
+### Note on NLTK (Required)
+After installing, ensure you download the required NLTK English word corpus:
+```bash
 python -c "import nltk; nltk.download('words')"
 ```
 
