@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "krutiextract"
+version = "1.0.0"
+authors = [
+  { name="Bharat Choudhary (Lecturer, Department of Secondary Education, Govt. of Rajasthan)", email="epicbharat@gmail.com" },
+]
+description = "A universal toolkit for extracting legacy Hindi PDFs (KrutiDev/Devlys/Chanakya) to Markdown"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "pymupdf",
+    "pymupdf4llm",
+    "nltk",
+    "opencv-python-headless",
+    "numpy"
+]
+
+[project.urls]
+Homepage = "https://github.com/epicbharat"
+"Bug Tracker" = "https://github.com/epicbharat/krutiextract/issues"
