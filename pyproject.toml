@@ -25,6 +25,17 @@ dependencies = [
     "numpy"
 ]
 
+[project.scripts]
+krutiextract = "hindi_pdf_extractor.src.cli:main"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing :: Linguistic",
+    "Natural Language :: Hindi"
+]
+
 [project.urls]
 Homepage = "https://github.com/epicbharat"
 "Bug Tracker" = "https://github.com/epicbharat/krutiextract/issues"

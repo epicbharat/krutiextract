@@ -70,7 +70,25 @@ def process_file(pdf_path: str, out_md_path: str, font: str = "auto", enhance_oc
         f.write(final_text)
     print(f"Saved {out_md_path}")
 
+def print_banner():
+    banner = r"""
+  _  __          _   _ ______      _                  _   
+ | |/ /         | | (_)  ____|    | |                | |  
+ | ' / _ __ _   | |_ _| |__  __  _| |_ _ __ __ _  ___| |_ 
+ |  < | '__| | | | __| |  __| \ \/ / __| '__/ _` |/ __| __|
+ | . \| |  | |_| | |_| | |____ >  <| |_| | | (_| | (__| |_ 
+ |_|\_\_|   \__,_|\__|_|______/_/\_\\__|_|  \__,_|\___|\__|
+                                                           
+    Universal Legacy Hindi PDF Extractor (v1.0)
+    By Bharat Choudhary
+    """
+    # ANSI escape code for Cyan text
+    print(f"\033[96m{banner}\033[0m")
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] not in ["-h", "--help"]:
+        print_banner()
+        
     parser = argparse.ArgumentParser(description="Universal Legacy Hindi PDF to Markdown Extractor")
     parser.add_argument("--input", help="Path to a single PDF file to process.")
     parser.add_argument("--output", help="Path to save the output markdown file.")
