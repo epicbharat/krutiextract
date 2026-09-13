@@ -34,6 +34,10 @@ def enhance_pdf_images(input_path: str, output_path: str):
             # 2. Resize (upscale by 2x) to give Tesseract more pixels
             gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
             
+            # 2.5 Erase Watermarks: Push all light gray pixels (> 180 brightness) to pure white
+            # This perfectly deletes solid gray diagonal watermarks like "BSER"
+            gray[gray > 180] = 255
+            
             # 3. Unsharp Masking (Sharpen)
             gaussian = cv2.GaussianBlur(gray, (9,9), 10.0)
             sharpened = cv2.addWeighted(gray, 1.5, gaussian, -0.5, 0, gray)
