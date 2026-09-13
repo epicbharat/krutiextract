@@ -51,8 +51,8 @@ def protect_non_hindi_syntax(raw_text: str) -> tuple[str, list]:
     # 2. Markdown Headings
     text = re.sub(r'(?m)^(#+)\s', preserve_match, text)
 
-    # 2.5 HTML Tags (e.g., <br>, <img>)
-    text = re.sub(r'<[^>]+>', preserve_match, text)
+    # 2. HTML tags (limited length and no newlines to prevent swallowing KrutiDev `<` characters)
+    text = re.sub(r'<[^>\n]{1,50}>', preserve_match, text)
 
     # 3. Images syntax ![alt](url)
     text = re.sub(r'!\[.*?\]\(.*?\)', preserve_match, text)
