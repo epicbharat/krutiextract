@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "krutiextract"
-version = "1.0.3"
+version = "1.0.4"
 authors = [
   { name="Bharat Choudhary (Lecturer, Department of Secondary Education, Govt. of Rajasthan)", email="epicbharat@gmail.com" },
 ]

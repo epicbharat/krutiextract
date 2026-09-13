@@ -57,15 +57,15 @@ def protect_non_hindi_syntax(raw_text: str) -> tuple[str, list]:
     # 3. Images syntax ![alt](url)
     text = re.sub(r'!\[.*?\]\(.*?\)', preserve_match, text)
 
-    # 4. Brackets containing English letters or digits
+    # 4. Brackets containing English letters or digits (limited to short strings to avoid swallowing paragraphs)
     def preserve_bracket(m):
         inner = m.group(1)
-        if re.search(r'[A-Za-z0-9]', inner):
+        if len(inner) <= 30 and re.search(r'[A-Za-z0-9]', inner):
             preserved.append(m.group(0))
             return get_marker(len(preserved)-1)
         return m.group(0)
 
-    text = re.sub(r'\(([^)]+)\)', preserve_bracket, text)
+    text = re.sub(r'\(([^)\n]+)\)', preserve_bracket, text)
     
     # 5. Isolated English words >= 4 chars or pure numbers
     def preserve_word(m):
@@ -83,8 +83,9 @@ def protect_non_hindi_syntax(raw_text: str) -> tuple[str, list]:
 def restore_non_hindi_syntax(text: str, preserved: list) -> str:
     """
     Restores the preserved English and Markdown chunks back into the converted text.
+    Restores in reverse order to seamlessly handle nested markers.
     """
-    for i in range(len(preserved)):
+    for i in reversed(range(len(preserved))):
         marker = chr(0x4E00 + i)
         text = text.replace(marker, preserved[i])
         
