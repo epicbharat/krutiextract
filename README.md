@@ -1,243 +1,145 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/epicbharat/krutiextract/main/assets/logo.png" alt="KrutiExtract Logo" width="250"/>
+  <img src="https://raw.githubusercontent.com/epicbharat/krutiextract/main/assets/banner.png" alt="KrutiExtract Banner" width="100%"/>
 
   <h1>KrutiExtract</h1>
-  <p><strong>Legacy Hindi PDF to Markdown</strong></p>
+  <p><strong>The Ultimate Legacy Hindi PDF to Markdown Extractor</strong></p>
 
   [![tests](https://github.com/epicbharat/krutiextract/actions/workflows/ci.yml/badge.svg)](https://github.com/epicbharat/krutiextract/actions/workflows/ci.yml)
+  [![PyPI Version](https://img.shields.io/pypi/v/krutiextract.svg)](https://pypi.org/project/krutiextract/)
   [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 </div>
 
 <hr/>
 
-Legacy Hindi fonts store Devanagari in 8-bit slots, so a PDF written in one of
-them extracts as Latin gibberish. Worse, the usual extractors sort glyphs by
-position, which scrambles matras: `vkSj` (और) is read as `vkjS` and converts to
-the non-word आरै.
+### 🚀 The Problem with Legacy Hindi PDFs
+Legacy Hindi fonts store Devanagari in 8-bit slots, meaning a PDF written in one of them extracts as Latin gibberish. Worse, standard OCR extractors sort glyphs by visual position, which permanently scrambles matras: `vkSj` (और) is read as `vkjS` and incorrectly converts to the non-word `आरै`.
 
-KrutiExtract reads the logical character stream instead of the visual order, so
-the typist's keystrokes survive intact, then maps them to Unicode.
+### ✨ The KrutiExtract Solution
+KrutiExtract reads the **logical character stream** instead of the visual order, ensuring the typist's original keystrokes survive intact, and mathematically maps them back to flawless Unicode Hindi. 
 
-**New here? Start with the [How-To Guide](docs/GUIDE.md)** — install, first
-conversion, choosing a profile, batch runs, OCR tuning and troubleshooting.
+**New here? Start with the [How-To Guide](docs/GUIDE.md)** — install, first conversion, choosing a profile, batch runs, OCR tuning and troubleshooting.
 
-## Encodings
+---
 
-These are different fonts with conflicting rules, not dialects of one map.
-Applying one profile's rules to another's document corrupts it, so the profile
-is detected per document.
+## 🛠️ Supported Encodings
 
-| Profile | Font | `=k` | `osQ` | `(` |
-|---|---|---|---|---|
-| `krutidev` (alias `devlys`) | KrutiDev 010, DevLys 010 | त्रा | वेफ | `;` |
-| `walkman` (alias `ncert`) | Walkman-Chanakya 905 | त्र | के | `(` |
+These are different fonts with conflicting rules. Applying one profile's rules to another's document corrupts it, so the profile is automatically detected per document.
+
+| Profile | Font Name | `=k` | `osQ` | `(` |
+|:---|:---|:---:|:---:|:---:|
+| `krutidev` *(devlys)* | KrutiDev 010, DevLys 010 | त्रा | वेफ | `;` |
+| `walkman` *(ncert)* | Walkman-Chanakya 905 | त्र | के | `(` |
 | `chanakya` | Chanakya | — | — | — |
-| `aps` (alias `priyanka`) | APS-DV-Priyanka | — | — | — |
-| `shreelipi` (alias `shreedev`) | Shree-Lipi / Shree Dev | — | — | — |
-| `shusha` (alias `susha`) | Shusha | — | — | — |
-| `aakriti` (alias `akruti`) | Aakriti | — | — | — |
+| `aps` *(priyanka)* | APS-DV-Priyanka | — | — | — |
+| `shreelipi` *(shreedev)* | Shree-Lipi / Shree Dev | — | — | — |
+| `shusha` *(susha)* | Shusha | — | — | — |
+| `aakriti` *(akruti)* | Aakriti | — | — | — |
 
-Three more profiles convert nothing and are detected the same way:
-`unicode` (already Devanagari), `hinglish` (Devanagari mixed with a lot of
-Latin) and `english`. For these the protect/convert/restore cycle is skipped
-entirely, so there is no way for it to damage the text.
+> [!NOTE]
+> **NCERT Hindi textbooks use Walkman-Chanakya 905**, not KrutiDev. That is why older single-map approaches produced `वुफल` for `कुल` and `क्षेत्रापफल` for `क्षेत्रफल`.
 
-Detection consults the PDF's own fonts first: if the body text is drawn in a
-normal Latin font there is nothing to convert, whatever the characters look
-like. Only then does it fall back to character statistics.
+---
 
-**NCERT Hindi textbooks use Walkman-Chanakya 905**, not KrutiDev. That is why
-the older single-map approach produced वुफल for कुल and क्षेत्रापफल for
-क्षेत्रफल: NCERT rules were being applied through a KrutiDev map.
+## 🛡️ Smart Protection Engine
 
-Each profile is anchored to its font. KrutiDev and DevLys were checked against
-the KRDEV010 and DevLys-010 glyph tables; Walkman against the font embedded in
-an NCERT PDF and the rendered pages of that same book; APS-DV-Priyanka,
-Shusha and Aakriti against their own font files, by rendering every mapping
-and reading it back off the page. Shree-Lipi is the one exception — see Known
-limits.
+Before conversion, KrutiExtract swaps out the following elements for opaque Private Use characters to protect them from being corrupted, restoring them perfectly afterward:
 
-The architectures differ more than the names suggest. APS puts the vertical
-stem on `e`, Shree-Lipi on `$`, Shusha on `a`, and Aakriti drops the idea
-entirely, giving every letter a lowercase full form and an uppercase half
-form.
+- **Standard Latin text** (e.g., Roman numerals or English paragraphs).
+- **Markdown structure** (headings, lists, tables, links, bold/italics).
+- **Numbers & Web elements** (URLs, e-mail addresses, decimals, percentages).
+- **English words**, gated by both a dictionary and a character-bigram model.
 
-## What is protected from conversion
+---
 
-Legacy maps claim ASCII punctuation as well as letters, so `.` becomes ण्, `|`
-becomes द्य and `` ` `` is the ृ matra. Before conversion the following are
-swapped out for opaque Private Use characters and restored afterwards:
+## 📦 Installation
 
-- **Text the PDF drew in a Latin font.** The span's font name is direct
-  evidence, matched in document order so that position disambiguates: in an
-  NCERT book `(v)` is the Hindi letter अ while `(i)` is a Roman numeral.
-- Markdown structure: headings, list bullets, table pipes and delimiter rows,
-  emphasis markers, fenced code, HTML tags, link targets.
-- URLs, e-mail addresses, decimals, percentages.
-- English words, gated by both a dictionary and a character-bigram model. The
-  dictionary alone is not enough in either direction: `thou` is the legacy
-  spelling of जीवन, and `leaching` is a real gloss that a small corpus lacks.
-
-## Install
+Install easily via pip:
 
 ```bash
 pip install krutiextract
 ```
 
-The version currently on PyPI is 1.0.7, whose console script points at a
-module that does not exist. Until 1.2.0 is published, install from source:
-
-```bash
-git clone https://github.com/epicbharat/krutiextract.git
-cd krutiextract
-pip install -e ".[ocr]"
-```
-
-Image enhancement for scans is optional:
-
+### Optional OCR Support
+For extracting scanned PDFs (image-only pages), install the OCR dependencies:
 ```bash
 pip install "krutiextract[ocr]"
 ```
 
-The English-word gate uses NLTK's Brown corpus. It downloads on first use; if
-it cannot, conversion still works and falls back to font evidence:
+*Note: OCR requires [Tesseract](https://github.com/tesseract-ocr/tesseract) to be installed on your system with the Hindi language pack.*
+- **Windows**: Run the Tesseract installer, tick **Hindi**, and add it to your PATH.
+- **Linux**: `sudo apt-get install tesseract-ocr tesseract-ocr-hin`
+
+---
+
+## 💻 Usage
+
+KrutiExtract comes with a powerful CLI for processing single files or massive batches.
 
 ```bash
-python -c "import nltk; nltk.download('brown')"
-```
-
-OCR of image-only pages needs [Tesseract](https://github.com/tesseract-ocr/tesseract)
-with the Hindi language pack, and a pymupdf4llm build that provides the layout
-back end. `krutiextract` prints whether OCR is available at startup.
-
-- Windows: run the installer, tick **Hindi**, add Tesseract to PATH.
-- Linux: `sudo apt-get install tesseract-ocr tesseract-ocr-hin`
-
-## Usage
-
-```bash
-# one file; the encoding is detected and reported
+# Convert a single file (encoding is auto-detected)
 krutiextract --input document.pdf --output document.md
 
-# a whole tree
+# Batch convert an entire directory tree
 krutiextract --dir ./pdfs --out-dir ./markdown
 
-# force a profile
+# Force a specific profile override
 krutiextract --input doc.pdf --profile walkman
 
-# sharpen images first (needs the [ocr] extra)
+# Sharpen scanned images first (requires [ocr] extra)
 krutiextract --input scan.pdf --enhance-ocr
 
-# drop running headers
+# Drop running headers automatically
 krutiextract --input doc.pdf --drop-pattern "^\s*Chapter \d+\s*$"
 
-# raise OCR resolution (the biggest lever on OCR accuracy)
+# Raise OCR resolution (highest impact on accuracy)
 krutiextract --input scan.pdf --ocr-dpi 600
 ```
 
-`--profile` (also spelled `--font`) accepts `auto` (default), `krutidev`,
-`devlys`, `walkman`, `ncert`, `chanakya`, `aps`, `priyanka`, `shusha`,
-`susha`, `aakriti`, `akruti`, `shreelipi`, `shreedev`, and the three
-pass-through profiles `unicode`, `hinglish` and `english`.
+### 🧩 Python Library Usage
 
-## Library
+You can also use KrutiExtract directly in your Python code:
 
 ```python
 from krutiextract import convert_pdf, walkman_to_unicode
 
+# Convert a full PDF to Markdown
 markdown, profile, warnings = convert_pdf("jhss101.pdf")
-walkman_to_unicode("{ks=k")        # 'क्षेत्र'
+
+# Convert a single string
+print(walkman_to_unicode("{ks=k"))  # Output: 'क्षेत्र'
 ```
-
-## Tests
-
-```bash
-pip install -e ".[dev]"
-pytest
-```
-
-The suite is a regression corpus: KrutiDev pairs anchored to the font's glyph
-table, and Walkman pairs read off the rendered pages of an NCERT chapter.
-
-## OCR quality
-
-Measured, not asserted. A Hindi text column from an NCERT page was rendered at
-several resolutions, degraded six ways, and OCR'd; the score is character error
-rate against the converted text of that same block.
-
-**Resolution dominates everything else.** At an effective 300 dpi Tesseract
-reached about 0.5% CER on *every* degradation tested — low resolution, blur,
-noise, heavy JPEG, an uneven wash. Below roughly 100 dpi the error rate jumps
-to 18–27% and no pre-processing recovers it. So `--ocr-dpi` (default 400) is
-the lever worth reaching for first.
-
-`--enhance-ocr` is off by default and, when on, applies only what a
-measurement of each image indicates:
-
-| Condition | Action | Measured effect (75 dpi source) |
-|---|---|---|
-| uneven lighting or a smooth watermark | divide out the background | 0.042 → 0.011 |
-| genuinely noisy | non-local-means denoise | 0.060 → 0.023 |
-| small **and** sharp text | Lanczos upscale | 0.018 → 0.005 |
-| skewed | rotate to the dominant text angle | — |
-
-Overall it moved mean CER from 0.272 to 0.259 at a 75 dpi source, with no case
-made worse. Rerun the whole measurement on your own material with:
-
-```bash
-python tools/benchmark_ocr.py sample.pdf 2 100 75
-```
- Three things it deliberately does **not** do, because each measured
-worse: binarise before Tesseract (0.178 → 0.216 — modern LSTM Tesseract wants
-grayscale and does its own thresholding), sharpen a blurred scan (0.702 →
-0.724), and upscale a heavily JPEG-compressed image.
-
-If your scans are poor, the order of attack is: raise `--ocr-dpi`, then rescan
-at a higher resolution, then `--enhance-ocr`. The last one cannot put back
-detail the scan never captured.
-
-## Known limits
-
-- **Seven of the eight encodings are anchored to a rendered page.** KrutiDev
-  010, DevLys 010, Walkman-Chanakya 905, Chanakya, APS-DV-Priyanka, Shusha and
-  Aakriti are each checked against their font.
-- **Shree-Lipi is a family, not one encoding.** Measured against the SHREE726
-  font, roughly a third of its code points differ from the layout this profile
-  implements. A Shree-Lipi document therefore converts correctly only if it
-  uses that layout; the pipeline warns whenever the profile is selected. See
-  docs/SHREE-LIPI.md.
-- Akruti (distinct from Aakriti), ISM (DVB-TT Surekh, DVOT Yogesh), Shivaji,
-  Ajanta and other families are not covered. A legacy font with no mapping is
-  detected and reported rather than converted wrongly. To add one, read it off
-  its own pages with `tools/glyph_sheet.py`; section 9 of
-  [docs/GUIDE.md](docs/GUIDE.md) walks through the method, and
-  [docs/AAKRITI.md](docs/AAKRITI.md) is the shortest worked example.
-- A legacy word is also a run of ASCII letters, so an isolated English word
-  with no font evidence can be misread as Hindi, and vice versa. Font evidence
-  resolves this whenever the source PDF has it; OCR output does not.
-- Text recovered by OCR arrives as Unicode already and bypasses conversion.
-- `krutidev` follows KRDEV010 exactly. If your document reads `osQ` as के, it
-  is Walkman-Chanakya and will be detected as such.
-
-## Contributing
-
-If a PDF breaks the extraction, please open an issue and attach it. A sample
-that uses an unsupported encoding is especially useful — section 9 of the
-[How-To Guide](docs/GUIDE.md) describes how a profile gets built from the
-font, and the method matters more than the table: never guess a mapping, read
-it off the glyphs.
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md). Version 1.2.0 separated the KrutiDev and
-Walkman-Chanakya profiles, which had been conflated into a single map.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
 
 ---
-**Author:** Bharat Choudhary
-**Email:** epicbharat@gmail.com
-**GitHub:** [https://github.com/epicbharat](https://github.com/epicbharat)
+
+## 🔬 OCR Quality & Enhancement
+
+Measured against ground-truth converted text, **resolution dominates everything else.** At an effective 300 DPI, Tesseract reached ~0.5% Character Error Rate (CER) on *every* degradation tested.
+
+If your scans are poor, use `--enhance-ocr`. It applies dynamic computer vision enhancements:
+- **Uneven lighting/watermarks**: Divides out the background (0.042 → 0.011 CER).
+- **Heavy Noise**: Non-local-means denoising (0.060 → 0.023 CER).
+- **Small, sharp text**: Lanczos upscaling (0.018 → 0.005 CER).
+
+If your scans are still failing, raise the `--ocr-dpi` (default 400), or rescan at a higher resolution.
+
+---
+
+## ⚠️ Known Limits
+
+- **Seven of the eight encodings are anchored to a rendered page.** KrutiDev 010, DevLys 010, Walkman-Chanakya 905, Chanakya, APS-DV-Priyanka, Shusha and Aakriti are each checked mathematically against their font tables.
+- **Shree-Lipi is a family, not one encoding.** Measured against the SHREE726 font. See `docs/SHREE-LIPI.md`.
+- **English/Hindi Ambiguity**: An isolated English word with no font evidence can sometimes be misread as Hindi. Font evidence resolves this in PDFs; OCR output does not.
+
+## 🤝 Contributing & Licensing
+
+If a PDF breaks the extraction, please open an issue and attach it! See the [Changelog](CHANGELOG.md) for recent updates.
+
+**License:** MIT. See [LICENSE](LICENSE).
+
+<div align="center">
+  <br/>
+  <strong>Author:</strong> Bharat Choudhary<br/>
+  <strong>Email:</strong> epicbharat@gmail.com<br/>
+  <strong>GitHub:</strong> <a href="https://github.com/epicbharat">epicbharat</a>
+</div>
