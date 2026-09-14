@@ -17,6 +17,7 @@ from tests.corpus import WORDS
 from tests.corpus_aps import APS_WORDS
 from tests.corpus_chanakya import CHANAKYA_WORDS
 from tests.corpus_shreelipi import SHREELIPI_WORDS
+from tests.corpus_shusha import SHUSHA_WORDS
 from tests.corpus_walkman import WALKMAN_WORDS
 
 
@@ -332,12 +333,13 @@ def test_font_family_normalisation(raw, expected):
 
 def test_unsupported_legacy_font_is_flagged():
     from src.pdf_spans import LEGACY_FONT_RE, SUPPORTED_FONT_RE
-    for family in ("akruti", "shusha", "shivaji"):
+    for family in ("akruti", "shivaji", "ajanta"):
         assert LEGACY_FONT_RE.search(family)
         assert not SUPPORTED_FONT_RE.search(family), family
     for family in ("kruti dev 010", "devlys 010", "walkman-chanakya905",
                    "chanakya", "aps-dv-priyanka", "shree-lipi",
-                   "shree lipi regular", "shreedev0708"):
+                   "shree lipi regular", "shreedev0708", "shusha",
+                   "shree dev 0714"):
         assert SUPPORTED_FONT_RE.search(family), family
 
 
@@ -648,3 +650,48 @@ def test_shreelipi_is_detected_over_the_other_legacy_profiles():
 def test_shreelipi_dispatches_through_convert_legacy_text():
     assert convert_legacy_text("H$_©", "shreelipi") == "\u0915\u0930\u094d\u092e"
     assert convert_legacy_text("H$_©", "shreedev") == "\u0915\u0930\u094d\u092e"
+
+
+# --- Shusha ---------------------------------------------------------------
+
+@pytest.mark.parametrize("source,expected", SHUSHA_WORDS)
+def test_shusha_real_words(source, expected):
+    from src.shusha_converter import shusha_to_unicode
+    assert shusha_to_unicode(source) == expected
+
+
+def test_shusha_a_is_the_stem_not_always_the_matra():
+    """'a' completes a stem-less consonant; a second 'a' is the \u093e matra.
+    Checked by rendering: 'War' is \u0926\u094d\u0935\u093e\u0930 and 'Waar' doubles the matra."""
+    from src.shusha_converter import shusha_to_unicode
+    assert shusha_to_unicode("m") == "\u092e\u094d"
+    assert shusha_to_unicode("ma") == "\u092e"
+    assert shusha_to_unicode("maa") == "\u092e\u093e"
+    assert shusha_to_unicode("k") == "\u0915"
+    assert shusha_to_unicode("ka") == "\u0915\u093e"
+    assert shusha_to_unicode("War") == "\u0926\u094d\u0935\u093e\u0930"
+
+
+def test_shusha_o_matras_beat_a_bare_stem():
+    """'maao' is \u092e\u094b, not \u092e\u093e + \u0947, and 'kao' is \u0915\u094b."""
+    from src.shusha_converter import shusha_to_unicode
+    assert shusha_to_unicode("maao") == "\u092e\u094b"
+    assert shusha_to_unicode("kao") == "\u0915\u094b"
+    assert shusha_to_unicode("kaO") == "\u0915\u094c"
+
+
+def test_shusha_pre_posed_i_and_reph():
+    from src.shusha_converter import shusha_to_unicode
+    assert shusha_to_unicode("iksaI") == "\u0915\u093f\u0938\u0940"
+    assert shusha_to_unicode("kma-") == "\u0915\u0930\u094d\u092e"
+    assert shusha_to_unicode("vagaI-krNa") == "\u0935\u0930\u094d\u0917\u0940\u0915\u0930\u0923"
+
+
+def test_shusha_is_detected_over_the_other_legacy_profiles():
+    text = "maanava p`aOVaoigakI Wara p`\u00cfit ko saaqa iËyaa krto hOM AaOr " * 6
+    assert auto_detect_font(text) == "shusha"
+
+
+def test_shusha_dispatches_through_convert_legacy_text():
+    assert convert_legacy_text("kma-", "shusha") == "\u0915\u0930\u094d\u092e"
+    assert convert_legacy_text("kma-", "susha") == "\u0915\u0930\u094d\u092e"

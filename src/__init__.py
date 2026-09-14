@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """KrutiExtract - legacy Hindi PDF to Markdown."""
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 from .aps_converter import aps_to_unicode
 from .chanakya_converter import chanakya_to_unicode
@@ -14,6 +14,7 @@ from .converter import (
 from .extractor import ExtractionError, extract_raw_markdown, ocr_available
 from .markdown_utils import protect_non_hindi_syntax, restore_non_hindi_syntax
 from .shreelipi_converter import shreelipi_to_unicode
+from .shusha_converter import shusha_to_unicode
 
 __all__ = [
     "__version__",
@@ -24,6 +25,7 @@ __all__ = [
     "chanakya_to_unicode",
     "aps_to_unicode",
     "shreelipi_to_unicode",
+    "shusha_to_unicode",
     "extract_raw_markdown",
     "ocr_available",
     "ExtractionError",

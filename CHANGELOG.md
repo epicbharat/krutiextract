@@ -3,6 +3,23 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-09-14
+
+### Added
+- **Shusha**, as the `shusha` profile (alias `susha`), detected automatically
+  and **anchored to the font**: the mapping was read from `Shusha.ttf` and
+  every rule checked by rendering it. `a` is the vertical stem, so `m` is म्
+  and `ma` is म, and a second `a` is the ा matra. 201 word pairs in
+  `tests/corpus_shusha.py`; 100% on a round-trip over 1,099 characters of
+  running Hindi.
+- Shree-Lipi face numbers (`Shree Dev 0714`, `Shree708`) now match the
+  supported-font check, alongside the spelled-out family names.
+
+### Fixed
+- Where a third-party Shusha converter disagreed with the font, the font was
+  taken as correct. It renders दक्षिण as `dixaNa`, not `daixaNa` — the latter
+  shows a ा the word does not have. See docs/SHUSHA.md.
+
 ## [1.4.0] - 2026-09-14
 
 ### Added

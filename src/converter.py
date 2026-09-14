@@ -10,6 +10,7 @@ with conflicting rules, not dialects of one map:
   chanakya  Chanakya (see chanakya_map.py).
   aps       APS-DV-Priyanka.  `e` is the vertical stem.
   shreelipi Shree-Lipi / Shree Dev.  `$` and `>` are the stem glyphs.
+  shusha    Shusha.  `a` is the stem, so `m` is म् and `ma` is म.
 
 Applying walkman rules to a krutidev document corrupts it and vice versa, so
 the profile is detected per document rather than hard-coded.
@@ -29,6 +30,7 @@ from .chanakya_converter import chanakya_to_unicode
 from .krutidev_map import array_one, array_two
 from .markdown_utils import is_marker
 from .shreelipi_converter import shreelipi_to_unicode
+from .shusha_converter import shusha_to_unicode
 
 __all__ = [
     "convert_legacy_text",
@@ -37,16 +39,17 @@ __all__ = [
     "walkman_to_unicode",
     "aps_to_unicode",
     "shreelipi_to_unicode",
+    "shusha_to_unicode",
     "auto_detect_font",
     "PROFILES",
 ]
 
 PROFILES = ("krutidev", "devlys", "walkman", "ncert", "chanakya", "aps",
-            "shreelipi", "shreedev",
+            "shreelipi", "shreedev", "shusha", "susha",
             "priyanka", "unicode", "english", "hinglish")
 
 _ALIASES = {"devlys": "krutidev", "ncert": "walkman", "priyanka": "aps",
-            "shreedev": "shreelipi"}
+            "shreedev": "shreelipi", "susha": "shusha"}
 
 #: Profiles that need no conversion at all. For these the whole
 #: protect/convert/restore cycle is skipped, so nothing can be damaged.
@@ -388,6 +391,14 @@ _APS_SIG = re.compile(r"eâ|kesâ|efJe|Deeb|ceW|Ùeg")
 # characters of Shree-Lipi against 0-1 on each of the other four corpora.
 _SHREE_SIG = re.compile(r"H\$|Ho\$|_o§|Am¡a|Zht|[LNQRST]>|Am¡|\$m|©")
 
+# Shusha writes the vertical stem as "a", so "aa" (letter + matra) and "Aa"
+# open a large share of its words, and "ko"/"hO"/"maoM" are everyday tokens.
+# Measured: 106 hits over 2,506 characters of Shusha, 0 on each of the other
+# five legacy corpora and 0 on English prose.
+_SHUSHA_SIG = re.compile(
+    r"aao|Aa|aoM|\bko\b|\bhO\b|\bhOM\b|maoM\b|\bkI\b|\bkr\b|naa\b|\bsa|%va\b"
+)
+
 # Whole tokens only. Without the boundaries these matched inside ordinary
 # English ("also", "these", "worlds"), which made a plain English document
 # look like KrutiDev.
@@ -439,6 +450,9 @@ def auto_detect_font(text: str) -> str:
     # since none of it appears in the legacy maps.
     aps = len(_APS_SIG.findall(text))
     shree = len(_SHREE_SIG.findall(text))
+    shusha = len(_SHUSHA_SIG.findall(text))
+    if shusha > max(kruti, walkman, chanakya, aps, shree):
+        return "shusha"
     if shree > max(kruti, walkman, chanakya, aps):
         return "shreelipi"
     if aps > max(kruti, walkman, chanakya):
@@ -474,6 +488,8 @@ def convert_legacy_text(text: str, font: str = "auto") -> str:
         return aps_to_unicode(text)
     if font == "shreelipi":
         return shreelipi_to_unicode(text)
+    if font == "shusha":
+        return shusha_to_unicode(text)
     if font == "walkman":
         return _convert_latin(text, "walkman")
     return _convert_latin(text, "krutidev")
