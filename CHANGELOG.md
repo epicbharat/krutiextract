@@ -3,6 +3,25 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] - 2026-09-14
+
+### Added
+- **Aakriti**, as the `aakriti` profile (alias `akruti`), detected
+  automatically and **anchored to the font**. No public converter exists for
+  this family, so the whole mapping was read off `Aakriti.ttf` and confirmed by
+  rendering. It has no stem glyph: lowercase is the full letter and uppercase
+  its half form (`s` क, `S` क्), with an explicit virama `\` for letters
+  lacking a half code. Devanagari digits sit on the shifted number row. 88 word
+  pairs in `tests/corpus_aakriti.py`.
+
+### Changed
+- **Shree-Lipi is now known to be a family rather than a single encoding.**
+  Compared against the SHREE726 font, roughly a third of the code points differ
+  from the layout the `shreelipi` profile implements -- `a` is ष there and र
+  here, `~` is ग there and ब here. The pipeline now emits a warning whenever
+  the profile is selected. See docs/SHREE-LIPI.md for the measured table.
+- The unsupported-font warning now names all seven supported families.
+
 ## [1.5.0] - 2026-09-14
 
 ### Added

@@ -36,6 +36,7 @@ is detected per document.
 | `aps` (alias `priyanka`) | APS-DV-Priyanka | — | — | — |
 | `shreelipi` (alias `shreedev`) | Shree-Lipi / Shree Dev | — | — | — |
 | `shusha` (alias `susha`) | Shusha | — | — | — |
+| `aakriti` (alias `akruti`) | Aakriti | — | — | — |
 
 Three more profiles convert nothing and are detected the same way:
 `unicode` (already Devanagari), `hinglish` (Devanagari mixed with a lot of
@@ -188,13 +189,16 @@ detail the scan never captured.
 
 ## Known limits
 
-- **Six of the seven encodings are anchored to a rendered page.** KrutiDev 010,
-  DevLys 010, Walkman-Chanakya 905, Chanakya, APS-DV-Priyanka and Shusha are
-  each checked against their font. **Shree-Lipi is not yet** — its mapping is
-  fitted and self-consistent but has never been compared against a Shree-Lipi
-  font or an encoded Shree-Lipi document, so read its output through before
-  trusting it (docs/SHREE-LIPI.md). Akruti/Aakriti, ISM (DVB-TT Surekh,
-  DVOT Yogesh) and other variants are not covered at all. A legacy font with no mapping is detected and reported rather than
+- **Seven of the eight encodings are anchored to a rendered page.** KrutiDev
+  010, DevLys 010, Walkman-Chanakya 905, Chanakya, APS-DV-Priyanka, Shusha and
+  Aakriti are each checked against their font.
+- **Shree-Lipi is a family, not one encoding.** Measured against the SHREE726
+  font, roughly a third of its code points differ from the layout this profile
+  implements. A Shree-Lipi document therefore converts correctly only if it
+  uses that layout; the pipeline warns whenever the profile is selected. See
+  docs/SHREE-LIPI.md.
+- Akruti (distinct from Aakriti), Shusha variants, ISM (DVB-TT Surekh, DVOT
+  Yogesh) and other families are not covered. A legacy font with no mapping is detected and reported rather than
   converted wrongly — see [docs/APS-DV-PRIYANKA.md](docs/APS-DV-PRIYANKA.md)
   for how far one such encoding has been worked out, and
   `tools/glyph_sheet.py` for reading a new one off its own pages.

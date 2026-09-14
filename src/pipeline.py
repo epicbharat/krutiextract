@@ -185,7 +185,8 @@ def convert_pdf(
                 f"the body font '{dominant}' is a legacy Devanagari encoding "
                 "this build has no mapping for; the converted text will be "
                 "wrong. Supported: KrutiDev, DevLys, Walkman-Chanakya, "
-                "Chanakya. See docs/GUIDE.md section 9."
+                "Chanakya, APS-DV-Priyanka, Shusha, Aakriti. "
+                "See docs/GUIDE.md section 9."
             )
 
     # The font name warns, it does not decide. A legacy font under a custom
@@ -198,6 +199,18 @@ def convert_pdf(
         out = clean_lines(raw, drop_patterns)
         _warn_if_empty(out, warnings, pdf_path, pages)
         return out, profile, warnings
+
+    if profile == "shreelipi":
+        # Shree-Lipi is a family, not one encoding. Measured against the
+        # SHREE726 font: roughly a third of the code points differ from the
+        # layout this profile implements, so a document set in another face
+        # converts wrongly rather than not at all.
+        warnings.append(
+            "Shree-Lipi documents vary by face: this profile implements one "
+            "layout, and faces such as SHREE726 assign several codes "
+            "differently. Check the output against the page before trusting "
+            "it. See docs/SHREE-LIPI.md."
+        )
 
     raw = repair_legacy_fragments(raw)
 

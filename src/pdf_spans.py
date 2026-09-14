@@ -24,7 +24,7 @@ __all__ = [
 # text drawn in one needs no conversion.
 LEGACY_FONT_RE = re.compile(
     r"kruti|krutidev|dev\s*lys|devlys|chanakya|walkman|shree|shusha|susha|shivaji|"
-    r"agra|amar|ajay|priya|richa|kundli|yogesh|bhasha|"
+    r"agra|amar|ajay|priya|richa|kundli|yogesh|bhasha|aakriti|"
     r"aps-?dv|aps-?dv-?priyanka|priyanka|shree-?lipi|shree-?dev|"
     r"sanskrit\s*99|ml-|dvb-|akruti|susha|ajanta|chandrika",
     re.I,
@@ -37,7 +37,8 @@ LEGACY_FONT_RE = re.compile(
 # not match "kruti".
 SUPPORTED_FONT_RE = re.compile(
     r"(?<![a-z])(kruti|dev\s*lys|devlys|chanakya|walkman|aps-?dv|priyanka|"
-    r"shree[\s-]?lipi|shree[\s-]?dev|shree[\s-]?\d{3,4}|shusha|susha)", re.I)
+    r"shree[\s-]?lipi|shree[\s-]?dev|shree[\s-]?\d{3,4}|shusha|susha|"
+    r"aakriti)", re.I)
 
 _TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9.'\-]*[A-Za-z0-9]|[A-Za-z]")
 

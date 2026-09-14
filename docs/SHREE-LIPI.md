@@ -64,6 +64,38 @@ and says so here rather than hiding it.
   wins: सब is a word and स्ब is not. A document that uses the other convention
   will show a stray ब where a trailing halant belongs.
 
+## Shree-Lipi is a family, not one encoding
+
+This is the most important thing on this page, and it was measured rather than
+assumed. The SHREE726 font was compared code by code against the layout this
+profile implements. Roughly two thirds agree -- क `H$`, म `_`, reph `©`,
+स `g`, ह `h`, ष्ट्र `ï´>` and the matras all hold, and words built only from
+those render correctly. But a substantial minority do not:
+
+| code | this profile | SHREE726 |
+|---|---|---|
+| `a` | र | ष |
+| `~` | ब | ग |
+| `n` | प | ि |
+| `C` | उ | श्र |
+| `e` | श | र |
+| `f` | ष | श |
+| `l` | श्र | उ |
+| `O` | ज | ढ |
+| `Q` | ट | फ |
+| `T` | ढ | ज |
+
+So भारत, encoded `^maV` for the layout here, renders **भाषत** in SHREE726.
+
+Modular InfoTech ships over 1,300 Devanagari faces under the Shree-Lipi name,
+numbered 700, 701, 703, 708, 726 and onward. They are not interchangeable at
+the byte level. The pipeline now warns whenever this profile is selected, and
+the warning is not boilerplate: a document set in the wrong face converts to
+plausible-looking but wrong Hindi, which is worse than not converting at all.
+
+If you have a Shree-Lipi document, check a line of the output against the page
+before trusting the rest.
+
 ## What has been verified, and what has not
 
 186 word pairs in `tests/corpus_shreelipi.py` pass, and a separate round-trip
@@ -75,10 +107,10 @@ That measures the profile against the encoding as a converter implements it.
 It does **not** measure it against a rendered Shree-Lipi page, which is the
 standard the other five profiles are held to. Two things would close the gap:
 
-1. A PDF set in Shree-Lipi. Run `tools/glyph_sheet.py` against it to crop every
-   code point and word, then check the table against what the page actually
-   shows.
-2. The font file. Rendering the glyph grid directly is what settled the stem
-   rule for APS-DV-Priyanka, and it would settle the three collisions above.
+1. A PDF set in Shree-Lipi, with a real text layer. A specimen catalogue does
+   not do it -- those are page images, and show only what the faces look like.
+2. The font file for the face the document uses. That is what settled Shusha
+   and Aakriti, and what revealed the face problem above.
 
-Until then, treat `shreelipi` output as needing a read-through.
+Until then, treat `shreelipi` output as needing a read-through, and check
+which face the document names before believing the conversion.

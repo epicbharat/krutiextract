@@ -14,6 +14,7 @@ from src.markdown_utils import (
     restore_non_hindi_syntax,
 )
 from tests.corpus import WORDS
+from tests.corpus_aakriti import AAKRITI_WORDS
 from tests.corpus_aps import APS_WORDS
 from tests.corpus_chanakya import CHANAKYA_WORDS
 from tests.corpus_shreelipi import SHREELIPI_WORDS
@@ -339,7 +340,7 @@ def test_unsupported_legacy_font_is_flagged():
     for family in ("kruti dev 010", "devlys 010", "walkman-chanakya905",
                    "chanakya", "aps-dv-priyanka", "shree-lipi",
                    "shree lipi regular", "shreedev0708", "shusha",
-                   "shree dev 0714"):
+                   "shree dev 0714", "aakriti"):
         assert SUPPORTED_FONT_RE.search(family), family
 
 
@@ -695,3 +696,49 @@ def test_shusha_is_detected_over_the_other_legacy_profiles():
 def test_shusha_dispatches_through_convert_legacy_text():
     assert convert_legacy_text("kma-", "shusha") == "\u0915\u0930\u094d\u092e"
     assert convert_legacy_text("kma-", "susha") == "\u0915\u0930\u094d\u092e"
+
+
+# --- Aakriti --------------------------------------------------------------
+
+@pytest.mark.parametrize("source,expected", AAKRITI_WORDS)
+def test_aakriti_real_words(source, expected):
+    from src.aakriti_converter import aakriti_to_unicode
+    assert aakriti_to_unicode(source) == expected
+
+
+def test_aakriti_case_is_the_half_form_rule():
+    """Lowercase is the letter, uppercase its half form. No stem glyph."""
+    from src.aakriti_converter import aakriti_to_unicode
+    for lower, upper, letter in (("s", "S", "\u0915"), ("g", "G", "\u0928"),
+                                 ("j", "J", "\u0935"), ("k", "K", "\u092a")):
+        assert aakriti_to_unicode(lower) == letter
+        assert aakriti_to_unicode(upper) == letter + "\u094d"
+
+
+def test_aakriti_letters_without_a_half_code_take_an_explicit_virama():
+    from src.aakriti_converter import aakriti_to_unicode
+    assert aakriti_to_unicode("b\\") == "\u0926\u094d"
+    assert aakriti_to_unicode("6\\") == "\u091f\u094d"
+
+
+def test_aakriti_devanagari_digits_sit_on_the_shifted_number_row():
+    from src.aakriti_converter import aakriti_to_unicode
+    assert aakriti_to_unicode("!@#") == "123"
+    assert aakriti_to_unicode(")") == "0"
+
+
+def test_aakriti_pre_posed_i_and_reph():
+    from src.aakriti_converter import aakriti_to_unicode
+    assert aakriti_to_unicode("ls;L") == "\u0915\u093f\u0938\u0940"
+    assert aakriti_to_unicode("sd{") == "\u0915\u0930\u094d\u092e"
+    assert aakriti_to_unicode("wd{") == "\u0927\u0930\u094d\u092e"
+
+
+def test_aakriti_is_detected_over_the_other_legacy_profiles():
+    text = "ljsf; cf}/ ;+;fwg sf/0 x} d]+ k|s[lt ;\\yfg " * 6
+    assert auto_detect_font(text) == "aakriti"
+
+
+def test_aakriti_dispatches_through_convert_legacy_text():
+    assert convert_legacy_text("sd{", "aakriti") == "\u0915\u0930\u094d\u092e"
+    assert convert_legacy_text("sd{", "akruti") == "\u0915\u0930\u094d\u092e"
