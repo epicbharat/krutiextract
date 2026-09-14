@@ -51,9 +51,17 @@ like. Only then does it fall back to character statistics.
 the older single-map approach produced वुफल for कुल and क्षेत्रापफल for
 क्षेत्रफल: NCERT rules were being applied through a KrutiDev map.
 
-Each profile is anchored to its font. The mapping tables were checked against
-the KRDEV010 and DevLys-010 glyph tables and, for Walkman, against the font
-embedded in an NCERT PDF plus the rendered pages of that same book.
+Each profile is anchored to its font. KrutiDev and DevLys were checked against
+the KRDEV010 and DevLys-010 glyph tables; Walkman against the font embedded in
+an NCERT PDF and the rendered pages of that same book; APS-DV-Priyanka,
+Shusha and Aakriti against their own font files, by rendering every mapping
+and reading it back off the page. Shree-Lipi is the one exception — see Known
+limits.
+
+The architectures differ more than the names suggest. APS puts the vertical
+stem on `e`, Shree-Lipi on `$`, Shusha on `a`, and Aakriti drops the idea
+entirely, giving every letter a lowercase full form and an uppercase half
+form.
 
 ## What is protected from conversion
 
@@ -128,8 +136,10 @@ krutiextract --input doc.pdf --drop-pattern "^\s*Chapter \d+\s*$"
 krutiextract --input scan.pdf --ocr-dpi 600
 ```
 
-`--profile` accepts `auto` (default), `krutidev`, `devlys`, `walkman`, `ncert`,
-`chanakya`, `unicode`, `hinglish`, `english`.
+`--profile` (also spelled `--font`) accepts `auto` (default), `krutidev`,
+`devlys`, `walkman`, `ncert`, `chanakya`, `aps`, `priyanka`, `shusha`,
+`susha`, `aakriti`, `akruti`, `shreelipi`, `shreedev`, and the three
+pass-through profiles `unicode`, `hinglish` and `english`.
 
 ## Library
 
@@ -197,11 +207,12 @@ detail the scan never captured.
   implements. A Shree-Lipi document therefore converts correctly only if it
   uses that layout; the pipeline warns whenever the profile is selected. See
   docs/SHREE-LIPI.md.
-- Akruti (distinct from Aakriti), Shusha variants, ISM (DVB-TT Surekh, DVOT
-  Yogesh) and other families are not covered. A legacy font with no mapping is detected and reported rather than
-  converted wrongly — see [docs/APS-DV-PRIYANKA.md](docs/APS-DV-PRIYANKA.md)
-  for how far one such encoding has been worked out, and
-  `tools/glyph_sheet.py` for reading a new one off its own pages.
+- Akruti (distinct from Aakriti), ISM (DVB-TT Surekh, DVOT Yogesh), Shivaji,
+  Ajanta and other families are not covered. A legacy font with no mapping is
+  detected and reported rather than converted wrongly. To add one, read it off
+  its own pages with `tools/glyph_sheet.py`; section 9 of
+  [docs/GUIDE.md](docs/GUIDE.md) walks through the method, and
+  [docs/AAKRITI.md](docs/AAKRITI.md) is the shortest worked example.
 - A legacy word is also a run of ASCII letters, so an isolated English word
   with no font evidence can be misread as Hindi, and vice versa. Font evidence
   resolves this whenever the source PDF has it; OCR output does not.

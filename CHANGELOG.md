@@ -23,6 +23,9 @@ All notable changes to this project are documented here. Versions follow
   takes them as command-line arguments.
 - docs/GUIDE.md listed four profiles and now lists all eight, with the
   Shree-Lipi family caveat in section 3.
+- README's `--profile` list, its "anchored to its font" paragraph and its
+  Known limits were all still describing a three-encoding build. They now
+  describe the eight that exist.
 
 ### Added
 - `test_every_corpus_detects_as_its_own_profile`, a guard against one
