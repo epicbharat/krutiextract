@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """KrutiExtract - legacy Hindi PDF to Markdown."""
 
-__version__ = "1.6.0"
+__version__ = "1.6.1"
 
 from .aakriti_converter import aakriti_to_unicode
 from .aps_converter import aps_to_unicode

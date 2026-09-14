@@ -3,6 +3,31 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.1] - 2026-09-14
+
+### Fixed
+- **Detection sent whole KrutiDev documents to the Walkman profile.** The
+  Walkman signature matched the bare pair `iQ`, which occurs inside ordinary
+  KrutiDev words such as `iQkLiQksjl`, and a Walkman hit is decisive by
+  design. The `i...Q` branch now requires at least one intervening key.
+  All seven legacy corpora now detect as their own profile, where KrutiDev
+  previously did not, and short 12-word KrutiDev samples improved from 30/40
+  to 35/40.
+- Adding Walkman's own single-byte overrides as extra signatures was tried and
+  measured worse -- they overlap Chanakya's byte range and took Chanakya from
+  40/40 to 5/40 -- so they were left out. The comment in `converter.py`
+  records this so it is not retried.
+
+### Changed
+- `extract_all.py` took folders from a hard-coded list of local paths. It now
+  takes them as command-line arguments.
+- docs/GUIDE.md listed four profiles and now lists all eight, with the
+  Shree-Lipi family caveat in section 3.
+
+### Added
+- `test_every_corpus_detects_as_its_own_profile`, a guard against one
+  profile's signature capturing another's documents.
+
 ## [1.6.0] - 2026-09-14
 
 ### Added

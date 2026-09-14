@@ -77,6 +77,23 @@ other. The same bytes mean different words:
 common source of confusion, because the text looks like KrutiDev and is
 usually described as KrutiDev.
 
+**Seven encodings are anchored to their font.** KrutiDev 010, DevLys 010,
+Walkman-Chanakya 905, Chanakya, APS-DV-Priyanka, Shusha and Aakriti were each
+settled by rendering the font and reading the glyphs back, not by trusting a
+keyboard chart. Each has its own architecture for the vertical stem: APS puts
+it on `e`, Shree-Lipi on `$`, Shusha on `a`, and Aakriti dispenses with it
+entirely by giving every letter a lowercase full form and an uppercase half
+form.
+
+**Shree-Lipi is the exception, and it is a family rather than one encoding.**
+Modular InfoTech ships over 1,300 Devanagari faces under that name and they
+are not interchangeable at the byte level: measured against the SHREE726 font,
+roughly a third of the code points differ from the layout this profile
+implements, so `^maV` reads भारत under one face and भाषत under the other. The
+pipeline warns whenever the profile is selected. If your document is
+Shree-Lipi, check a line of output against the page before trusting the rest,
+and see docs/SHREE-LIPI.md.
+
 Detection runs in this order:
 
 1. **Devanagari dominance.** More Devanagari than Latin means the document is
@@ -108,6 +125,10 @@ krutiextract --input doc.pdf --profile krutidev
 | `krutidev`, `devlys` | KrutiDev 010 / DevLys 010 |
 | `walkman`, `ncert` | Walkman-Chanakya 905, including NCERT textbooks |
 | `chanakya` | Chanakya |
+| `aps`, `priyanka` | APS-DV-Priyanka |
+| `shusha`, `susha` | Shusha |
+| `aakriti`, `akruti` | Aakriti |
+| `shreelipi`, `shreedev` | Shree-Lipi — read the caveat in section 3 first |
 | `unicode` | already Devanagari; copied through untouched |
 | `hinglish` | Devanagari mixed with a lot of Latin |
 | `english` | no Hindi at all |

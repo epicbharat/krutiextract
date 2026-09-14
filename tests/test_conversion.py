@@ -742,3 +742,24 @@ def test_aakriti_is_detected_over_the_other_legacy_profiles():
 def test_aakriti_dispatches_through_convert_legacy_text():
     assert convert_legacy_text("sd{", "aakriti") == "\u0915\u0930\u094d\u092e"
     assert convert_legacy_text("sd{", "akruti") == "\u0915\u0930\u094d\u092e"
+
+
+# --- detection across every profile ---------------------------------------
+
+def test_every_corpus_detects_as_its_own_profile():
+    """The eight profiles share one byte range, so a signature added for one
+    can quietly capture another. This is the guard: a Walkman marker was once
+    matching inside ordinary KrutiDev words, which sent whole KrutiDev books
+    to the wrong profile."""
+    corpora = {
+        "krutidev": WORDS,
+        "walkman": WALKMAN_WORDS,
+        "chanakya": CHANAKYA_WORDS,
+        "aps": APS_WORDS,
+        "shreelipi": SHREELIPI_WORDS,
+        "shusha": SHUSHA_WORDS,
+        "aakriti": AAKRITI_WORDS,
+    }
+    for name, pairs in corpora.items():
+        text = " ".join(source for source, _ in pairs)
+        assert auto_detect_font(text) == name, name

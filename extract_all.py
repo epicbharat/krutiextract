@@ -1,25 +1,29 @@
 # -*- coding: utf-8 -*-
-"""Batch-convert the local NCERT folders.
+"""Batch-convert one or more folders of PDFs.
 
-Edit FOLDERS to taste. Runs the package as a module so it works from a source
-checkout without installing.
+    python extract_all.py "/path/to/folder" "/another/folder"
+
+Equivalent to running the CLI once per folder, which is all this does. It
+exists so a source checkout can be driven without installing the package.
 """
 
 import os
 import subprocess
 import sys
 
-FOLDERS = [
-    r"D:\GSSS Jethantri\NCERT BOoks\10th\Social Science_Hi",
-    r"D:\GSSS Jethantri\NCERT BOoks\10th\Social Science_Eng",
-]
 
+def main(argv):
+    folders = argv[1:]
+    if not folders:
+        print(__doc__.strip())
+        print("\nNo folders given.")
+        return 2
 
-def main():
     failures = 0
-    for folder in FOLDERS:
+    for folder in folders:
         if not os.path.isdir(folder):
             print(f"Directory not found: {folder}")
+            failures += 1
             continue
         print(f"\n{'=' * 60}\n{folder}\n{'=' * 60}")
         result = subprocess.run(
@@ -31,4 +35,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv))

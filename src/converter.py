@@ -378,7 +378,15 @@ _LATIN = re.compile(r"[A-Za-z]")
 
 # Two-key sequences that only make sense in Walkman-Chanakya. In KrutiDev they
 # would spell वेफ / वुफ / पफ, which are not Hindi words.
-_WALKMAN_SIG = re.compile(r"o[sSqwkah`]{0,2}Q|i[sSqwkah`]{0,2}Q|mQ")
+# The "i...Q" branch needs at least one intervening key. Without that, the
+# bare pair "iQ" occurs inside ordinary KrutiDev words ("iQkLiQksjl",
+# "{ks=iQy"), and because a walkman hit is decisive it pushed whole KrutiDev
+# documents onto the wrong profile.
+#
+# Adding Walkman's own single-byte overrides (\u00bc \u00bd \u00df) as extra signatures was
+# tried and measured worse: they overlap Chanakya's byte range and pushed
+# Chanakya documents onto the Walkman profile, 40/40 correct down to 5/40.
+_WALKMAN_SIG = re.compile(r"o[sSqwkah`]{0,2}Q|i[sSqwkah`]{1,2}Q|mQ")
 
 # Multi-character Chanakya signatures. Single characters like Ü or ß are not
 # usable: they occur in KrutiDev too.
