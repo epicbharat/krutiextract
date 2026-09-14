@@ -3,6 +3,24 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-09-14
+
+### Added
+- **Shree-Lipi / Shree Dev**, as the `shreelipi` profile (alias `shreedev`),
+  detected automatically. Same architecture as APS: a consonant is a bare code
+  plus a stem glyph (`$`, or `>` for the retroflex group), with body matras
+  written between the letter and its stem. Reph fuses with a following matra
+  into one code (`u` ी, `}` े, `£` ै, `ª` ं), and `{`/`p` are the pre-posed ि.
+  186 word pairs in `tests/corpus_shreelipi.py`; 98.9% character accuracy over
+  2,780 characters of round-tripped running text.
+
+### Known limits
+- The Shree-Lipi mapping has **not** been checked against a Shree-Lipi PDF or
+  the font file, unlike the other five profiles. Three codes are ambiguous in
+  the encoding itself (`–` is ह्न, ड्ढ and an en dash; `~` is ब and, for some
+  producers, a word-final virama) and are resolved by frequency. See
+  docs/SHREE-LIPI.md.
+
 ## [1.3.0] - 2026-09-14
 
 ### Added

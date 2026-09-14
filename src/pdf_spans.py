@@ -36,7 +36,8 @@ LEGACY_FONT_RE = re.compile(
 # Anchored on the left: "akruti" is a different, unsupported family and must
 # not match "kruti".
 SUPPORTED_FONT_RE = re.compile(
-    r"(?<![a-z])(kruti|dev\s*lys|devlys|chanakya|walkman|aps-?dv|priyanka)", re.I)
+    r"(?<![a-z])(kruti|dev\s*lys|devlys|chanakya|walkman|aps-?dv|priyanka|"
+    r"shree[\s-]?lipi|shree[\s-]?dev)", re.I)
 
 _TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9.'\-]*[A-Za-z0-9]|[A-Za-z]")
 

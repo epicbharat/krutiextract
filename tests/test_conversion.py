@@ -16,6 +16,7 @@ from src.markdown_utils import (
 from tests.corpus import WORDS
 from tests.corpus_aps import APS_WORDS
 from tests.corpus_chanakya import CHANAKYA_WORDS
+from tests.corpus_shreelipi import SHREELIPI_WORDS
 from tests.corpus_walkman import WALKMAN_WORDS
 
 
@@ -331,11 +332,12 @@ def test_font_family_normalisation(raw, expected):
 
 def test_unsupported_legacy_font_is_flagged():
     from src.pdf_spans import LEGACY_FONT_RE, SUPPORTED_FONT_RE
-    for family in ("shree-lipi", "akruti", "shusha"):
+    for family in ("akruti", "shusha", "shivaji"):
         assert LEGACY_FONT_RE.search(family)
         assert not SUPPORTED_FONT_RE.search(family), family
     for family in ("kruti dev 010", "devlys 010", "walkman-chanakya905",
-                   "chanakya", "aps-dv-priyanka"):
+                   "chanakya", "aps-dv-priyanka", "shree-lipi",
+                   "shree lipi regular", "shreedev0708"):
         assert SUPPORTED_FONT_RE.search(family), family
 
 
@@ -598,3 +600,51 @@ def test_aps_is_detected_over_the_other_legacy_profiles():
 def test_aps_reph_moves_to_the_front_of_its_cluster():
     from src.aps_converter import aps_to_unicode
     assert aps_to_unicode("keâeÙe&keâeefjCeer") == "कार्यकारिणी"
+
+
+# --- Shree-Lipi -----------------------------------------------------------
+
+@pytest.mark.parametrize("source,expected", SHREELIPI_WORDS)
+def test_shreelipi_real_words(source, expected):
+    from src.shreelipi_converter import shreelipi_to_unicode
+    assert shreelipi_to_unicode(source) == expected
+
+
+def test_shreelipi_stem_glyphs_are_dropped_and_matras_sit_inside_them():
+    """A matra on the letter body is written between the letter and its stem,
+    so the stem cannot simply be treated as part of the consonant code."""
+    from src.shreelipi_converter import shreelipi_to_unicode
+    assert shreelipi_to_unicode("H$") == "\u0915"
+    assert shreelipi_to_unicode("Hw$") == "\u0915\u0941"
+    assert shreelipi_to_unicode("Q>") == "\u091f"
+    assert shreelipi_to_unicode("Qw>") == "\u091f\u0941"
+
+
+def test_shreelipi_pre_posed_i_lands_after_the_whole_cluster():
+    from src.shreelipi_converter import shreelipi_to_unicode
+    assert shreelipi_to_unicode("{H$gr") == "\u0915\u093f\u0938\u0940"
+    assert shreelipi_to_unicode("gpå_{bV") == "\u0938\u092e\u094d\u092e\u093f\u0932\u093f\u0924"
+
+
+def test_shreelipi_reph_moves_to_the_front_of_its_cluster():
+    from src.shreelipi_converter import shreelipi_to_unicode
+    assert shreelipi_to_unicode("H$_©") == "\u0915\u0930\u094d\u092e"
+    assert shreelipi_to_unicode("H$_u") == "\u0915\u0930\u094d\u092e\u0940"
+    assert shreelipi_to_unicode("nXmWmoª") == "\u092a\u0926\u093e\u0930\u094d\u0925\u094b\u0902"
+
+
+def test_shreelipi_en_dash_is_a_dash_between_spaces():
+    """U+2013 is both the \u0939\u094d\u0928 conjunct and a dash in this encoding."""
+    from src.shreelipi_converter import shreelipi_to_unicode
+    assert shreelipi_to_unicode("H$ \u2013 I") == "\u0915 \u2013 \u0916"
+    assert "\u0939\u094d\u0928" in shreelipi_to_unicode("{M\u2013V")
+
+
+def test_shreelipi_is_detected_over_the_other_legacy_profiles():
+    text = "_mZd àm¡Úmo{JH$s Ûmam àH¥${V Ho$ gmW {H«$`m H$aVo h¢ Am¡a " * 6
+    assert auto_detect_font(text) == "shreelipi"
+
+
+def test_shreelipi_dispatches_through_convert_legacy_text():
+    assert convert_legacy_text("H$_©", "shreelipi") == "\u0915\u0930\u094d\u092e"
+    assert convert_legacy_text("H$_©", "shreedev") == "\u0915\u0930\u094d\u092e"

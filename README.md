@@ -34,6 +34,7 @@ is detected per document.
 | `walkman` (alias `ncert`) | Walkman-Chanakya 905 | त्र | के | `(` |
 | `chanakya` | Chanakya | — | — | — |
 | `aps` (alias `priyanka`) | APS-DV-Priyanka | — | — | — |
+| `shreelipi` (alias `shreedev`) | Shree-Lipi / Shree Dev | — | — | — |
 
 Three more profiles convert nothing and are detected the same way:
 `unicode` (already Devanagari), `hinglish` (Devanagari mixed with a lot of
@@ -186,10 +187,13 @@ detail the scan never captured.
 
 ## Known limits
 
-- **Five encodings are verified, not all of them.** KrutiDev 010, DevLys 010,
-  Walkman-Chanakya 905, Chanakya and APS-DV-Priyanka are each anchored to
-  their font and to a rendered book. Shree-Lipi, Shusha, Akruti, ISM and other
-  variants are not covered. A legacy font with no mapping is detected and reported rather than
+- **Five of the six encodings are anchored to a rendered page.** KrutiDev 010,
+  DevLys 010, Walkman-Chanakya 905, Chanakya and APS-DV-Priyanka are each
+  checked against their font and a real book. **Shree-Lipi is not yet** — its
+  mapping is fitted and self-consistent but has never been compared against a
+  Shree-Lipi PDF, so read its output through before trusting it
+  (docs/SHREE-LIPI.md). Shusha, Akruti, ISM and other variants are not
+  covered at all. A legacy font with no mapping is detected and reported rather than
   converted wrongly — see [docs/APS-DV-PRIYANKA.md](docs/APS-DV-PRIYANKA.md)
   for how far one such encoding has been worked out, and
   `tools/glyph_sheet.py` for reading a new one off its own pages.
